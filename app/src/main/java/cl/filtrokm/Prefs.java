@@ -16,7 +16,7 @@ public class Prefs {
     public double maxPickupKm;   // 0 = sin filtro
     public double costPerKm;     // 0 = no calcula neto
     public double comUber, comDidi, comIndrive; // % comisión a descontar del precio mostrado
-    public double retencion;                    // % retención boleta honorarios (2026: 15,25)
+    public double retUber, retDidi, retIndrive; // % retención boleta honorarios (Uber/DiDi 15,25; inDrive no retiene)
     public String pkgs;
     public int overlayY;
 
@@ -34,7 +34,10 @@ public class Prefs {
         r.comUber = getD(p, "comUber", 0);
         r.comDidi = getD(p, "comDidi", 0);
         r.comIndrive = getD(p, "comIndrive", 12);
-        r.retencion = getD(p, "retencion", 15.25);
+        double retOld = getD(p, "retencion", 15.25);
+        r.retUber = getD(p, "retUber", retOld);
+        r.retDidi = getD(p, "retDidi", retOld);
+        r.retIndrive = getD(p, "retIndrive", 0);
         r.pkgs = p.getString("pkgs", DEFAULT_PKGS);
         r.overlayY = p.getInt("overlayY", 80);
         return r;
@@ -52,6 +55,13 @@ public class Prefs {
         if ("Uber".equals(app)) return comUber;
         if ("DiDi".equals(app)) return comDidi;
         if ("inDrive".equals(app)) return comIndrive;
+        return 0;
+    }
+
+    public double retention(String app) {
+        if ("Uber".equals(app)) return retUber;
+        if ("DiDi".equals(app)) return retDidi;
+        if ("inDrive".equals(app)) return retIndrive;
         return 0;
     }
 

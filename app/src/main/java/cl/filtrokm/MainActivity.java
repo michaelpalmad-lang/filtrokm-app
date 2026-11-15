@@ -32,7 +32,7 @@ public class MainActivity extends Activity {
 
     LinearLayout col;
     TextView status;
-    EditText eKm, eHora, ePick, eCost, eComU, eComD, eComI, eRet, ePkgs, eTest;
+    EditText eKm, eHora, ePick, eCost, eComU, eComD, eComI, eRetU, eRetD, eRetI, ePkgs, eTest;
     LinearLayout preview;
     TextView diag;
 
@@ -67,7 +67,9 @@ public class MainActivity extends Activity {
         eComU = field("Comisión Uber % (0 si el precio que muestra ya es tu ganancia)", fmt(pr.comUber), true);
         eComD = field("Comisión DiDi % (0 si el precio que muestra ya es tu ganancia)", fmt(pr.comDidi), true);
         eComI = field("Comisión inDrive % (muestra lo que paga el pasajero)", fmt(pr.comIndrive), true);
-        eRet = field("Retención boleta honorarios % (2026: 15,25)", fmt(pr.retencion), true);
+        eRetU = field("Retención Uber % (boleta honorarios 2026: 15,25)", fmt(pr.retUber), true);
+        eRetD = field("Retención DiDi % (boleta honorarios 2026: 15,25)", fmt(pr.retDidi), true);
+        eRetI = field("Retención inDrive % (no retiene: 0)", fmt(pr.retIndrive), true);
         eCost = field("Costo bencina por km (0 = no descontar)", fmt(pr.costPerKm), true);
         ePkgs = field("Apps a vigilar (una por línea)", pr.pkgs, false);
         button("Guardar", new View.OnClickListener() {
@@ -128,7 +130,9 @@ public class MainActivity extends Activity {
                 .putString("comUber", eComU.getText().toString().trim())
                 .putString("comDidi", eComD.getText().toString().trim())
                 .putString("comIndrive", eComI.getText().toString().trim())
-                .putString("retencion", eRet.getText().toString().trim())
+                .putString("retUber", eRetU.getText().toString().trim())
+                .putString("retDidi", eRetD.getText().toString().trim())
+                .putString("retIndrive", eRetI.getText().toString().trim())
                 .putString("pkgs", ePkgs.getText().toString().trim())
                 .apply();
     }

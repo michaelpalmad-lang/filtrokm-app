@@ -19,9 +19,9 @@ public class CardBuilder {
     static final int BOX_OK = 0x33FFFFFF, BOX_BAD = 0xFF8E0000;
 
     public static View build(Context c, Parser.Offer o, Prefs p, View.OnClickListener onClose) {
-        // ganancia final = precio - comisión - retención (15,25%) - combustible
+        // ganancia final = precio - comisión - retención (solo Uber/DiDi) - combustible
         double com = o.price * p.commission(o.app) / 100.0;
-        double ret = (o.price - com) * p.retencion / 100.0;
+        double ret = (o.price - com) * p.retention(o.app) / 100.0;
         double fuel = p.costPerKm * o.km;
         double net = o.price - com - ret - fuel;
         double netKm = o.km > 0 ? net / o.km : 0;
