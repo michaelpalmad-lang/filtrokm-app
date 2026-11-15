@@ -70,6 +70,12 @@ public class CardBuilder {
         TextView l3 = tv(c, sb3.toString(), 15, false);
         l3.setAlpha(0.92f);
         root.addView(l3);
+
+        if (fuel > 0) {
+            TextView l4 = tv(c, "⛽ Bencina −" + Parser.clp(fuel) + "  (" + Parser.km(o.km) + " km)", 13, false);
+            l4.setAlpha(0.85f);
+            root.addView(l4);
+        }
         return root;
     }
 

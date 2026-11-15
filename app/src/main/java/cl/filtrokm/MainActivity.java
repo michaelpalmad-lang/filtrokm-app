@@ -33,7 +33,7 @@ public class MainActivity extends Activity {
     LinearLayout col;
     TextView status;
     Button power;
-    EditText eKm, eHora, ePick, eCost, eComU, eComD, eComDP, eComI, eRetU, eRetD, eRetI, ePkgs, eTest;
+    EditText eKm, eHora, ePick, eCost, eComU, eComD, eComDP, eComI, eRetU, eRetD, eRetI, eLitro, eRend, ePkgs, eTest;
     LinearLayout preview;
     TextView diag;
     TextView upd;
@@ -124,7 +124,10 @@ public class MainActivity extends Activity {
         eRetU = field("Retención Uber % (boleta honorarios 2026: 15,25)", fmt(pr.retUber), true);
         eRetD = field("Retención DiDi % (boleta honorarios 2026: 15,25)", fmt(pr.retDidi), true);
         eRetI = field("Retención inDrive % (no retiene: 0)", fmt(pr.retIndrive), true);
-        eCost = field("Costo bencina por km (0 = no descontar)", fmt(pr.costPerKm), true);
+        title("Bencina (opcional)");
+        eLitro = field("Precio del litro $ (0 = no descontar)", fmt(pr.fuelPrice), true);
+        eRend = field("Rendimiento del auto (km por litro)", fmt(pr.fuelKmL), true);
+        eCost = field("O costo directo por km (si no usas los dos de arriba)", fmt(Prefs.getD(Prefs.sp(this), "costoKm", 0)), true);
         ePkgs = field("Avanzado: otros paquetes a vigilar (uno por línea)", pr.pkgs, false);
         button("Guardar", new View.OnClickListener() {
             public void onClick(View v) { save(); runTest(); toast("Guardado"); }
@@ -234,6 +237,8 @@ public class MainActivity extends Activity {
                 .putString("minHora", eHora.getText().toString().trim())
                 .putString("maxRecogida", ePick.getText().toString().trim())
                 .putString("costoKm", eCost.getText().toString().trim())
+                .putString("precioLitro", eLitro.getText().toString().trim())
+                .putString("rendimiento", eRend.getText().toString().trim())
                 .putString("comUber", eComU.getText().toString().trim())
                 .putString("comDidi", eComD.getText().toString().trim())
                 .putString("comDidiPtp", eComDP.getText().toString().trim())

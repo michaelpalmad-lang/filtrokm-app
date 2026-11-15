@@ -14,7 +14,8 @@ public class Prefs {
     public double minPerKm;
     public double minPerHour;
     public double maxPickupKm;   // 0 = sin filtro
-    public double costPerKm;     // 0 = no calcula neto
+    public double costPerKm;     // costo bencina por km (calculado)
+    public double fuelPrice, fuelKmL; // precio litro y rendimiento km/l (0 = no descontar)
     public double comUber, comDidi, comDidiPtp, comIndrive; // % comisión a descontar del precio mostrado
     public double retUber, retDidi, retIndrive; // % retención boleta honorarios (Uber/DiDi 15,25; inDrive no retiene)
     public String pkgs;
@@ -37,7 +38,9 @@ public class Prefs {
         r.minPerKm = getD(p, "minKm", 600);
         r.minPerHour = getD(p, "minHora", 13000);
         r.maxPickupKm = getD(p, "maxRecogida", 0);
-        r.costPerKm = getD(p, "costoKm", 0);
+        r.fuelPrice = getD(p, "precioLitro", 0);
+        r.fuelKmL = getD(p, "rendimiento", 0);
+        r.costPerKm = (r.fuelPrice > 0 && r.fuelKmL > 0) ? r.fuelPrice / r.fuelKmL : getD(p, "costoKm", 0);
         r.comUber = getD(p, "comUber", 0);
         r.comDidi = getD(p, "comDidi", 0);
         r.comDidiPtp = getD(p, "comDidiPtp", 15.33);
