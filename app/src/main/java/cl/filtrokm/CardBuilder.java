@@ -33,74 +33,41 @@ public class CardBuilder {
         boolean usePick = p.maxPickupKm > 0 && o.pickupKm >= 0;
         boolean okPick = !usePick || o.pickupKm <= p.maxPickupKm;
 
-        List<String> fails = new ArrayList<String>();
-        if (!okKm) fails.add("$/km");
-        if (!okH) fails.add("$/h");
-        if (!okPick) fails.add("recogida");
-        int total = 1 + (hasH ? 1 : 0) + (usePick ? 1 : 0);
-        int bg = fails.isEmpty() ? GREEN : (fails.size() >= total ? RED : ORANGE);
+        boolean ok = okKm && okH && okPick;
+        int bg = ok ? GREEN : (okKm ? ORANGE : RED);
 
         LinearLayout root = new LinearLayout(c);
         root.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(c, 12);
-        root.setPadding(pad, dp(c, 8), pad, dp(c, 10));
+        int pad = dp(c, 14);
+        root.setPadding(pad, dp(c, 8), dp(c, 8), dp(c, 12));
         root.setBackground(round(c, bg, 18, 0));
         root.setElevation(dp(c, 6));
 
-        // fila 1: app + cerrar
+        // fila principal: $ por km (lo que importa) + cerrar
         LinearLayout r1 = new LinearLayout(c);
         r1.setGravity(Gravity.CENTER_VERTICAL);
-        TextView chip = tv(c, (o.app.isEmpty() ? "Viaje" : o.app) + (o.ponTuPrecio ? " · Pon Tu Precio" : ""), 13, true);
-        chip.setPadding(dp(c, 10), dp(c, 2), dp(c, 10), dp(c, 2));
-        chip.setBackground(round(c, 0x33FFFFFF, 20, 0));
-        r1.addView(chip);
-        View sp = new View(c);
-        r1.addView(sp, new LinearLayout.LayoutParams(0, 1, 1f));
+        TextView big = tv(c, (okKm ? "✓ " : "✗ ") + Parser.clp(netKm) + "/km", 38, true);
+        r1.addView(big, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         if (onClose != null) {
             TextView x = tv(c, "✕", 20, true);
-            x.setPadding(dp(c, 12), 0, dp(c, 4), 0);
+            x.setPadding(dp(c, 12), 0, dp(c, 6), dp(c, 12));
             x.setOnClickListener(onClose);
             r1.addView(x);
         }
         root.addView(r1);
 
-        // fila 2: total
-        LinearLayout r2 = new LinearLayout(c);
-        r2.setGravity(Gravity.BOTTOM);
-        TextView lt = tv(c, "GANAS ", 13, false);
-        TextView tot = tv(c, Parser.clp(net), 30, true);
-        TextView chk = tv(c, fails.isEmpty() ? "  ✓✓" : "  ✗", 22, true);
-        r2.addView(lt);
-        r2.addView(tot);
-        r2.addView(chk);
-        root.addView(r2);
+        // fila resumen
+        StringBuilder sb = new StringBuilder("Ganas " + Parser.clp(net));
+        if (hasH) sb.append("  ·  ").append(Parser.clp(netH)).append("/h");
+        TextView l2 = tv(c, sb.toString(), 20, true);
+        root.addView(l2);
 
-        StringBuilder det = new StringBuilder("Tarifa " + Parser.clp(o.price));
-        if (com > 0) det.append(" · comisión −").append(Parser.clp(com));
-        if (ret > 0) det.append(" · retención −").append(Parser.clp(ret));
-        if (fuel > 0) det.append(" · bencina −").append(Parser.clp(fuel));
-        TextView dt = tv(c, det.toString(), 12, false);
-        dt.setAlpha(0.9f);
-        root.addView(dt);
-
-        String status = fails.isEmpty() ? "TODOS LOS FILTROS CUMPLEN" : "NO CUMPLE: " + join(fails);
-        TextView st = tv(c, status, 13, false);
-        st.setPadding(0, 0, 0, dp(c, 6));
-        root.addView(st);
-
-        // fila 3: recuadros
-        LinearLayout r3 = new LinearLayout(c);
-        r3.addView(box(c, (okKm ? "✓ " : "✗ ") + Parser.clp(netKm) + "/km",
-                "Mín. " + Parser.clp(p.minPerKm) + "\nBruto " + Parser.clp(o.perKm()), okKm), boxLp(c, false));
-        if (hasH) {
-            r3.addView(box(c, (okH ? "✓ " : "✗ ") + Parser.clp(netH) + "/h",
-                    "Mín. " + Parser.clp(p.minPerHour) + "\nBruto " + Parser.clp(o.perHour()), okH), boxLp(c, false));
-        }
-        String sub = Parser.km(o.km) + " km total";
-        if (o.pickupKm >= 0) sub += "\nRecogida " + Parser.km(o.pickupKm) + " km";
-        r3.addView(box(c, "⏱ " + (hasH ? Parser.mins(o.min) : "-- min"), sub, okPick), boxLp(c, true));
-        root.addView(r3);
-
+        StringBuilder sb3 = new StringBuilder(Parser.km(o.km) + " km");
+        if (o.pickupKm >= 0) sb3.append(" (").append(Parser.km(o.pickupKm)).append(" recogida)");
+        if (hasH) sb3.append("  ·  ").append(Parser.mins(o.min));
+        TextView l3 = tv(c, sb3.toString(), 15, false);
+        l3.setAlpha(0.92f);
+        root.addView(l3);
         return root;
     }
 
