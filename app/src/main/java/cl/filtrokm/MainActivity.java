@@ -66,7 +66,7 @@ public class MainActivity extends Activity {
         title("Descuentos");
         eComU = field("Comisión Uber % (0 si el precio que muestra ya es tu ganancia)", fmt(pr.comUber), true);
         eComD = field("Comisión DiDi % (0 si el precio que muestra ya es tu ganancia)", fmt(pr.comDidi), true);
-        eComI = field("Comisión inDrive % (muestra lo que paga el pasajero)", fmt(pr.comIndrive), true);
+        eComI = field("Comisión inDrive % (10,6% + IVA = 12,61%)", fmt(pr.comIndrive), true);
         eRetU = field("Retención Uber % (boleta honorarios 2026: 15,25)", fmt(pr.retUber), true);
         eRetD = field("Retención DiDi % (boleta honorarios 2026: 15,25)", fmt(pr.retDidi), true);
         eRetI = field("Retención inDrive % (no retiene: 0)", fmt(pr.retIndrive), true);

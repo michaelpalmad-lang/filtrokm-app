@@ -26,6 +26,12 @@ public class Prefs {
 
     public static Prefs load(Context c) {
         SharedPreferences p = sp(c);
+        // v1.3: inDrive cobra 10,6% + IVA sobre la comisión = 12,61% (recibo real)
+        if (p.getInt("cfgVer", 1) < 3) {
+            SharedPreferences.Editor e = p.edit().putInt("cfgVer", 3);
+            if ("12".equals(p.getString("comIndrive", "12"))) e.putString("comIndrive", "12.61");
+            e.apply();
+        }
         Prefs r = new Prefs();
         r.minPerKm = getD(p, "minKm", 600);
         r.minPerHour = getD(p, "minHora", 13000);
@@ -33,7 +39,7 @@ public class Prefs {
         r.costPerKm = getD(p, "costoKm", 0);
         r.comUber = getD(p, "comUber", 0);
         r.comDidi = getD(p, "comDidi", 0);
-        r.comIndrive = getD(p, "comIndrive", 12);
+        r.comIndrive = getD(p, "comIndrive", 12.61);
         double retOld = getD(p, "retencion", 15.25);
         r.retUber = getD(p, "retUber", retOld);
         r.retDidi = getD(p, "retDidi", retOld);
