@@ -13,3 +13,6 @@ y dibuja la tarjeta encima. Todo queda en el teléfono.
 
 ## Compilar
 Cada push a `main` compila la APK con GitHub Actions y la publica en *Releases* como `FiltroKM-v1.N.apk`.
+
+## Actualizaciones
+La app revisa este repo al abrirse (Releases → latest) y se actualiza sola, sin navegador.
