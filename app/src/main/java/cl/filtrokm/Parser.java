@@ -23,6 +23,7 @@ public class Parser {
 
     public static class Offer {
         public String app = "";
+        public boolean ponTuPrecio; // DiDi "Pon Tu Precio": el precio es lo que paga el pasajero
         public long price;
         public double km;
         public double min;
@@ -121,6 +122,7 @@ public class Parser {
                 firstMin = false;
             }
         }
+        o.ponTuPrecio = all.toLowerCase(Locale.ROOT).contains("pon tu precio");
         o.valid = o.price > 0 && o.km > 0.05;
         return o;
     }

@@ -20,7 +20,7 @@ public class CardBuilder {
 
     public static View build(Context c, Parser.Offer o, Prefs p, View.OnClickListener onClose) {
         // ganancia final = precio - comisión - retención (solo Uber/DiDi) - combustible
-        double com = o.price * p.commission(o.app) / 100.0;
+        double com = o.price * p.commission(o.app, o.ponTuPrecio) / 100.0;
         double ret = (o.price - com) * p.retention(o.app) / 100.0;
         double fuel = p.costPerKm * o.km;
         double net = o.price - com - ret - fuel;
@@ -50,7 +50,7 @@ public class CardBuilder {
         // fila 1: app + cerrar
         LinearLayout r1 = new LinearLayout(c);
         r1.setGravity(Gravity.CENTER_VERTICAL);
-        TextView chip = tv(c, o.app.isEmpty() ? "Viaje" : o.app, 13, true);
+        TextView chip = tv(c, (o.app.isEmpty() ? "Viaje" : o.app) + (o.ponTuPrecio ? " · Pon Tu Precio" : ""), 13, true);
         chip.setPadding(dp(c, 10), dp(c, 2), dp(c, 10), dp(c, 2));
         chip.setBackground(round(c, 0x33FFFFFF, 20, 0));
         r1.addView(chip);

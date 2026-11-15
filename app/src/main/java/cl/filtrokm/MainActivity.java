@@ -32,7 +32,7 @@ public class MainActivity extends Activity {
 
     LinearLayout col;
     TextView status;
-    EditText eKm, eHora, ePick, eCost, eComU, eComD, eComI, eRetU, eRetD, eRetI, ePkgs, eTest;
+    EditText eKm, eHora, ePick, eCost, eComU, eComD, eComDP, eComI, eRetU, eRetD, eRetI, ePkgs, eTest;
     LinearLayout preview;
     TextView diag;
 
@@ -66,6 +66,7 @@ public class MainActivity extends Activity {
         title("Descuentos");
         eComU = field("Comisión Uber % (0 si el precio que muestra ya es tu ganancia)", fmt(pr.comUber), true);
         eComD = field("Comisión DiDi % (0 si el precio que muestra ya es tu ganancia)", fmt(pr.comDidi), true);
+        eComDP = field("Comisión DiDi \"Pon Tu Precio\" % (paga el pasajero: 15,33)", fmt(pr.comDidiPtp), true);
         eComI = field("Comisión inDrive % (10,6% + IVA = 12,61%)", fmt(pr.comIndrive), true);
         eRetU = field("Retención Uber % (boleta honorarios 2026: 15,25)", fmt(pr.retUber), true);
         eRetD = field("Retención DiDi % (boleta honorarios 2026: 15,25)", fmt(pr.retDidi), true);
@@ -129,6 +130,7 @@ public class MainActivity extends Activity {
                 .putString("costoKm", eCost.getText().toString().trim())
                 .putString("comUber", eComU.getText().toString().trim())
                 .putString("comDidi", eComD.getText().toString().trim())
+                .putString("comDidiPtp", eComDP.getText().toString().trim())
                 .putString("comIndrive", eComI.getText().toString().trim())
                 .putString("retUber", eRetU.getText().toString().trim())
                 .putString("retDidi", eRetD.getText().toString().trim())
