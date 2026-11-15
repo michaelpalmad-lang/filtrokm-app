@@ -57,6 +57,7 @@ public class OfferService extends AccessibilityService {
         if (on) { showBubble(); paintBubble(); }
         else {
             hide();
+            hideMenu();
             removeTarget();
             if (bubble != null) { try { wm.removeView(bubble); } catch (Exception ignored) { } bubble = null; }
         }
@@ -116,19 +117,17 @@ public class OfferService extends AccessibilityService {
         blp.gravity = Gravity.TOP | Gravity.START;
         blp.x = Prefs.sp(this).getInt("bubbleX", 0);
         blp.y = Prefs.sp(this).getInt("bubbleY", CardBuilder.dp(this, 260));
-        final int slop = CardBuilder.dp(this, 8);
+        final int slop = CardBuilder.dp(this, 14);
         b.setOnTouchListener(new View.OnTouchListener() {
             float rx, ry; int sx, sy; boolean moved; long downAt;
-            final Runnable longPress = new Runnable() { public void run() { moved = true; openApp(); } };
             public boolean onTouch(View v, MotionEvent ev) {
                 switch (ev.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                         rx = ev.getRawX(); ry = ev.getRawY(); sx = blp.x; sy = blp.y; moved = false;
-                        h.postDelayed(longPress, 700);
                         return true;
                     case MotionEvent.ACTION_MOVE:
                         float dx = ev.getRawX() - rx, dy = ev.getRawY() - ry;
-                        if (Math.abs(dx) > slop || Math.abs(dy) > slop) { moved = true; h.removeCallbacks(longPress); }
+                        if (Math.abs(dx) > slop || Math.abs(dy) > slop) { moved = true; hideMenu(); }
                         if (moved) {
                             showTarget();
                             blp.x = Math.max(0, sx + (int) dx);
@@ -137,14 +136,13 @@ public class OfferService extends AccessibilityService {
                         }
                         return true;
                     case MotionEvent.ACTION_UP:
-                        h.removeCallbacks(longPress);
                         removeTarget();
                         if (moved && overTarget(ev.getRawX(), ev.getRawY())) {
                             setOn(false);
                             android.widget.Toast.makeText(OfferService.this, "FiltroKM apagado. Ábrelo para encender.", android.widget.Toast.LENGTH_LONG).show();
                             return true;
                         }
-                        if (!moved) togglePause();
+                        if (!moved) { if (menu != null) hideMenu(); else showMenu(); }
                         else Prefs.sp(OfferService.this).edit().putInt("bubbleX", blp.x).putInt("bubbleY", blp.y).apply();
                         return true;
                 }
@@ -174,9 +172,73 @@ public class OfferService extends AccessibilityService {
     }
 
     void openApp() {
+        hideMenu();
         android.content.Intent i = new android.content.Intent(this, MainActivity.class);
-        i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(i);
+        i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        try {
+            int fl = android.os.Build.VERSION.SDK_INT >= 23 ? 0x04000000 /* FLAG_IMMUTABLE */ : 0;
+            android.app.PendingIntent.getActivity(this, 7, i, fl | android.app.PendingIntent.FLAG_UPDATE_CURRENT).send();
+        } catch (Exception e) {
+            try { startActivity(i); } catch (Exception ignored) { }
+        }
+    }
+
+    // ---------- menú de la burbuja ----------
+    View menu;
+    void showMenu() {
+        if (menu != null) return;
+        android.widget.LinearLayout m = new android.widget.LinearLayout(this);
+        m.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int p = CardBuilder.dp(this, 6);
+        m.setPadding(p, p, p, p);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(0xF0212121);
+        bg.setCornerRadius(CardBuilder.dp(this, 14));
+        m.setBackground(bg);
+        m.setElevation(CardBuilder.dp(this, 8));
+        m.addView(menuItem("📱  Abrir FiltroKM", new Runnable() { public void run() { openApp(); } }));
+        m.addView(menuItem(paused ? "▶  Reanudar" : "⏸  Pausar", new Runnable() { public void run() { hideMenu(); togglePause(); } }));
+        m.addView(menuItem("⏻  Apagar", new Runnable() { public void run() {
+            hideMenu(); setOn(false);
+            android.widget.Toast.makeText(OfferService.this, "FiltroKM apagado. Ábrelo para encender.", android.widget.Toast.LENGTH_LONG).show();
+        } }));
+        WindowManager.LayoutParams ml = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT);
+        ml.gravity = Gravity.TOP | Gravity.START;
+        int sw = getResources().getDisplayMetrics().widthPixels;
+        int bsize = CardBuilder.dp(this, 54);
+        boolean left = blp.x < sw / 2;
+        ml.x = left ? blp.x + bsize + CardBuilder.dp(this, 6) : Math.max(0, blp.x - CardBuilder.dp(this, 200));
+        ml.y = blp.y;
+        m.setOnTouchListener(new View.OnTouchListener() {
+            public boolean onTouch(View v, MotionEvent ev) {
+                if (ev.getAction() == MotionEvent.ACTION_OUTSIDE) { hideMenu(); return true; }
+                return false;
+            }
+        });
+        menu = m;
+        try { wm.addView(menu, ml); } catch (Exception e) { menu = null; }
+        h.removeCallbacks(hideMenuR);
+        h.postDelayed(hideMenuR, 6000);
+    }
+    final Runnable hideMenuR = new Runnable() { public void run() { hideMenu(); } };
+    void hideMenu() {
+        h.removeCallbacks(hideMenuR);
+        if (menu != null) { try { wm.removeView(menu); } catch (Exception ignored) { } menu = null; }
+    }
+    android.widget.TextView menuItem(String label, final Runnable action) {
+        android.widget.TextView t = new android.widget.TextView(this);
+        t.setText(label);
+        t.setTextColor(0xFFFFFFFF);
+        t.setTextSize(17);
+        int ph = CardBuilder.dp(this, 16), pv = CardBuilder.dp(this, 12);
+        t.setPadding(ph, pv, ph * 2, pv);
+        t.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { action.run(); } });
+        return t;
     }
 
     /** Muestra una oferta de ejemplo para comprobar que la tarjeta flota. */
@@ -336,6 +398,7 @@ public class OfferService extends AccessibilityService {
     @Override
     public void onDestroy() {
         hide();
+        hideMenu();
         removeTarget();
         if (bubble != null) { try { wm.removeView(bubble); } catch (Exception ignored) { } bubble = null; }
         instance = null;

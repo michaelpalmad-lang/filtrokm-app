@@ -82,7 +82,7 @@ public class MainActivity extends Activity {
                 toast("Así se verá cuando llegue una oferta");
             }
         });
-        TextView bubbleHelp = text("Con el lector activo verás una burbuja verde \"$/km\" flotando. Tócala para pausar (gris \"OFF\") o reanudar; mantenla presionada para abrir esta pantalla; arrástrala para moverla. Para apagarla del todo, arrástrala hasta la ✕ de abajo o usa el botón Apagar.", 13);
+        TextView bubbleHelp = text("Con el lector activo verás una burbuja verde \"$/km\" flotando. Tócala para abrir el menú: Abrir FiltroKM, Pausar/Reanudar o Apagar. Arrástrala para moverla, o hasta la ✕ de abajo para apagarla.", 13);
         bubbleHelp.setTextColor(Color.GRAY);
         col.addView(bubbleHelp);
         TextView help = text("En Accesibilidad busca \"FiltroKM\" y actívalo. Si aparece \"Ajuste restringido\": "
