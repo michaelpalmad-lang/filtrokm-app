@@ -63,6 +63,16 @@ public class MainActivity extends Activity {
         button("Abrir Accesibilidad", new View.OnClickListener() {
             public void onClick(View v) { startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); }
         });
+        button("Probar ventana flotante", new View.OnClickListener() {
+            public void onClick(View v) {
+                if (OfferService.instance == null) { toast("Primero activa el lector en Accesibilidad"); return; }
+                OfferService.instance.showDemo();
+                toast("Así se verá cuando llegue una oferta");
+            }
+        });
+        TextView bubbleHelp = text("Con el lector activo verás una burbuja verde \"$/km\" flotando. Tócala para pausar (gris \"OFF\") o reanudar; mantenla presionada para abrir esta pantalla; arrástrala para moverla.", 13);
+        bubbleHelp.setTextColor(Color.GRAY);
+        col.addView(bubbleHelp);
         TextView help = text("En Accesibilidad busca \"FiltroKM\" y actívalo. Si aparece \"Ajuste restringido\": "
                 + "Ajustes > Apps > FiltroKM > menú ⋮ > \"Permitir ajustes restringidos\", y vuelve a intentarlo.", 13);
         help.setTextColor(Color.GRAY);
@@ -119,7 +129,8 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         boolean on = serviceOn();
-        status.setText(on ? "✓ Lector ACTIVO" : "✗ Lector desactivado");
+        boolean paused = Prefs.sp(this).getBoolean("paused", false);
+        status.setText(!on ? "✗ Lector desactivado" : (paused ? "⏸ Lector en pausa (toca la burbuja para reanudar)" : "✓ Lector ACTIVO"));
         status.setTextColor(on ? 0xFF2E7D32 : 0xFFC62828);
         // al abrir la app: revisa si hay versión nueva y se actualiza sola
         if (System.currentTimeMillis() - lastCheck > 10 * 60 * 1000L) checkUpdate(true);

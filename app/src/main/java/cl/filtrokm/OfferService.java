@@ -32,6 +32,11 @@ public class OfferService extends AccessibilityService {
     String dismissedSig = "";
     Prefs prefs;
 
+    static OfferService instance;
+    View bubble;
+    WindowManager.LayoutParams blp;
+    boolean paused;
+
     final Runnable analyzeR = new Runnable() { public void run() { pending = false; analyze(); } };
     final Runnable hideR = new Runnable() { public void run() { hide(); } };
 
@@ -39,6 +44,97 @@ public class OfferService extends AccessibilityService {
     protected void onServiceConnected() {
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         prefs = Prefs.load(this);
+        instance = this;
+        paused = Prefs.sp(this).getBoolean("paused", false);
+        showBubble();
+    }
+
+    // ---------- burbuja flotante: muestra que el lector está prendido ----------
+    void showBubble() {
+        if (bubble != null) return;
+        final android.widget.TextView b = new android.widget.TextView(this);
+        b.setGravity(Gravity.CENTER);
+        b.setTextColor(0xFFFFFFFF);
+        b.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        b.setTextSize(13);
+        b.setElevation(CardBuilder.dp(this, 6));
+        bubble = b;
+        paintBubble();
+        int size = CardBuilder.dp(this, 54);
+        blp = new WindowManager.LayoutParams(size, size,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT);
+        blp.gravity = Gravity.TOP | Gravity.START;
+        blp.x = Prefs.sp(this).getInt("bubbleX", 0);
+        blp.y = Prefs.sp(this).getInt("bubbleY", CardBuilder.dp(this, 260));
+        final int slop = CardBuilder.dp(this, 8);
+        b.setOnTouchListener(new View.OnTouchListener() {
+            float rx, ry; int sx, sy; boolean moved; long downAt;
+            final Runnable longPress = new Runnable() { public void run() { moved = true; openApp(); } };
+            public boolean onTouch(View v, MotionEvent ev) {
+                switch (ev.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        rx = ev.getRawX(); ry = ev.getRawY(); sx = blp.x; sy = blp.y; moved = false;
+                        h.postDelayed(longPress, 700);
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        float dx = ev.getRawX() - rx, dy = ev.getRawY() - ry;
+                        if (Math.abs(dx) > slop || Math.abs(dy) > slop) { moved = true; h.removeCallbacks(longPress); }
+                        if (moved) {
+                            blp.x = Math.max(0, sx + (int) dx);
+                            blp.y = Math.max(0, sy + (int) dy);
+                            try { wm.updateViewLayout(bubble, blp); } catch (Exception ignored) { }
+                        }
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        h.removeCallbacks(longPress);
+                        if (!moved) togglePause();
+                        else Prefs.sp(OfferService.this).edit().putInt("bubbleX", blp.x).putInt("bubbleY", blp.y).apply();
+                        return true;
+                }
+                return false;
+            }
+        });
+        try { wm.addView(bubble, blp); } catch (Exception e) { bubble = null; }
+    }
+
+    void paintBubble() {
+        if (bubble == null) return;
+        android.widget.TextView b = (android.widget.TextView) bubble;
+        b.setText(paused ? "OFF" : "$/km");
+        android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+        g.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        g.setColor(paused ? 0xDD757575 : 0xEE2E7D32);
+        g.setStroke(CardBuilder.dp(this, 2), 0xCCFFFFFF);
+        b.setBackground(g);
+    }
+
+    void togglePause() {
+        paused = !paused;
+        Prefs.sp(this).edit().putBoolean("paused", paused).apply();
+        if (paused) hide();
+        paintBubble();
+        android.widget.Toast.makeText(this, paused ? "FiltroKM en pausa" : "FiltroKM leyendo ofertas", android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    void openApp() {
+        android.content.Intent i = new android.content.Intent(this, MainActivity.class);
+        i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(i);
+    }
+
+    /** Muestra una oferta de ejemplo para comprobar que la tarjeta flota. */
+    public void showDemo() {
+        List<Parser.Item> items = new ArrayList<Parser.Item>();
+        for (String l : MainActivity.SAMPLE.split("\n")) items.add(new Parser.Item(l, 0));
+        Parser.Offer o = Parser.parse(items);
+        o.app = "Uber";
+        prefs = Prefs.load(this);
+        dismissedSig = "";
+        show(o);
+        h.removeCallbacks(hideR);
+        h.postDelayed(hideR, 8000);
     }
 
     @Override
@@ -47,6 +143,7 @@ public class OfferService extends AccessibilityService {
         CharSequence p = e.getPackageName();
         String pkg = p == null ? null : p.toString();
         if (getPackageName().equals(pkg)) return;
+        if (paused) return;
         if (e.getEventType() != AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
             if (prefs == null) prefs = Prefs.load(this);
             if (!prefs.isTarget(pkg)) return;
@@ -182,5 +279,10 @@ public class OfferService extends AccessibilityService {
     public void onInterrupt() { hide(); }
 
     @Override
-    public void onDestroy() { hide(); super.onDestroy(); }
+    public void onDestroy() {
+        hide();
+        if (bubble != null) { try { wm.removeView(bubble); } catch (Exception ignored) { } bubble = null; }
+        instance = null;
+        super.onDestroy();
+    }
 }
