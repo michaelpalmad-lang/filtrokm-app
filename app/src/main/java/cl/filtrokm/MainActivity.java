@@ -32,7 +32,7 @@ public class MainActivity extends Activity {
 
     LinearLayout col;
     TextView status;
-    EditText eKm, eHora, ePick, eCost, ePkgs, eTest;
+    EditText eKm, eHora, ePick, eCost, eComU, eComD, eComI, eRet, ePkgs, eTest;
     LinearLayout preview;
     TextView diag;
 
@@ -59,11 +59,16 @@ public class MainActivity extends Activity {
         col.addView(help);
 
         Prefs pr = Prefs.load(this);
-        title("2. Filtros");
+        title("2. Filtros (sobre lo que realmente ganas)");
         eKm = field("Mínimo $ por km", fmt(pr.minPerKm), true);
         eHora = field("Mínimo $ por hora", fmt(pr.minPerHour), true);
         ePick = field("Máximo km de recogida (0 = sin filtro)", fmt(pr.maxPickupKm), true);
-        eCost = field("Costo combustible por km (0 = no calcular neto)", fmt(pr.costPerKm), true);
+        title("Descuentos");
+        eComU = field("Comisión Uber % (0 si el precio que muestra ya es tu ganancia)", fmt(pr.comUber), true);
+        eComD = field("Comisión DiDi % (0 si el precio que muestra ya es tu ganancia)", fmt(pr.comDidi), true);
+        eComI = field("Comisión inDrive % (muestra lo que paga el pasajero)", fmt(pr.comIndrive), true);
+        eRet = field("Retención boleta honorarios % (2026: 15,25)", fmt(pr.retencion), true);
+        eCost = field("Costo bencina por km (0 = no descontar)", fmt(pr.costPerKm), true);
         ePkgs = field("Apps a vigilar (una por línea)", pr.pkgs, false);
         button("Guardar", new View.OnClickListener() {
             public void onClick(View v) { save(); runTest(); toast("Guardado"); }
@@ -120,6 +125,10 @@ public class MainActivity extends Activity {
                 .putString("minHora", eHora.getText().toString().trim())
                 .putString("maxRecogida", ePick.getText().toString().trim())
                 .putString("costoKm", eCost.getText().toString().trim())
+                .putString("comUber", eComU.getText().toString().trim())
+                .putString("comDidi", eComD.getText().toString().trim())
+                .putString("comIndrive", eComI.getText().toString().trim())
+                .putString("retencion", eRet.getText().toString().trim())
                 .putString("pkgs", ePkgs.getText().toString().trim())
                 .apply();
     }
@@ -137,7 +146,7 @@ public class MainActivity extends Activity {
             items.add(new Parser.Item(line, h));
         }
         Parser.Offer o = Parser.parse(items);
-        o.app = "Prueba";
+        o.app = guessApp(eTest.getText().toString());
         preview.removeAllViews();
         if (!o.valid) {
             preview.addView(text("No se encontró precio y km en el texto (precio " + o.price + ", km " + o.km + ").", 14));
@@ -145,6 +154,14 @@ public class MainActivity extends Activity {
         }
         save();
         preview.addView(CardBuilder.build(this, o, Prefs.load(this), null));
+    }
+
+    static String guessApp(String t) {
+        String l = t.toLowerCase();
+        if (l.contains("ubercab")) return "Uber";
+        if (l.contains("didi") || l.contains("tarifa base")) return "DiDi";
+        if (l.contains("indriver") || l.contains("aceptar por")) return "inDrive";
+        return "Uber";
     }
 
     // ---------- helpers UI ----------

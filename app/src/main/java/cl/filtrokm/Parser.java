@@ -37,12 +37,22 @@ public class Parser {
 
     // grupo1 = "+" (bono incluido, se ignora) · grupo2 = monto · grupo3 = "/km" "/h" (se ignora)
     static final Pattern MONEY = Pattern.compile(
-            "(\\+\\s?)?(?:CLP|\\$)\\s?(\\d{1,3}(?:[.,\\u00A0\\u202F ]\\d{3})+(?:[.,]\\d{2})?|\\d+(?:[.,]\\d{2})?)(\\s?/\\s?(?:km|h|hr|min))?",
+            "(\\+\\s?)?(?:CLP|\\$)\\s?(\\d{1,3}(?:[.,\\u00A0\\u202F ]\\d{3})+(?:[.,]\\d{1,2})?|\\d+(?:[.,]\\d{1,2})?)(\\s?/\\s?(?:km|h|hr|min))?",
             Pattern.CASE_INSENSITIVE);
 
     // "1 h 5 min (40 km)" o "3 min (0.6 km)"
     static final Pattern PAIR = Pattern.compile(
             "(?:(\\d+)\\s*h(?:rs?|oras?)?\\s*)?(\\d+)\\s*min\\s*\\(\\s*(\\d+(?:[.,]\\d+)?)\\s*(km|m)\\s*\\)",
+            Pattern.CASE_INSENSITIVE);
+
+    // "13.2 km  33 min" (inDrive) o "A 900 m · 3 min"
+    static final Pattern PAIR_KM_MIN = Pattern.compile(
+            "(?<![\\d.,])(\\d+(?:[.,]\\d+)?)\\s*(km|m)\\b[\\s·•|,-]*(?:(\\d+)\\s*h(?:rs?|oras?)?\\s*)?(\\d+)\\s*min",
+            Pattern.CASE_INSENSITIVE);
+
+    // "12 min · 4,5 km"
+    static final Pattern PAIR_MIN_KM = Pattern.compile(
+            "(?<![\\d+])(?:(\\d+)\\s*h(?:rs?|oras?)?\\s*)?(\\d+)\\s*min\\.?[\\s·•|,-]*(\\d+(?:[.,]\\d+)?)\\s*(km|m)\\b",
             Pattern.CASE_INSENSITIVE);
 
     static final Pattern KM = Pattern.compile(
@@ -69,13 +79,24 @@ public class Parser {
         Offer o = new Offer();
         o.price = pickPrice(items, all);
 
+        // pares tiempo/distancia, buscados dentro de cada texto y sin repetir
         List<double[]> pairs = new ArrayList<double[]>();
-        Matcher m = PAIR.matcher(all);
-        while (m.find()) {
-            double min = (m.group(1) != null ? Integer.parseInt(m.group(1)) * 60 : 0) + Integer.parseInt(m.group(2));
-            double km = num(m.group(3));
-            if (m.group(4).equalsIgnoreCase("m")) km /= 1000.0;
-            pairs.add(new double[]{min, km});
+        java.util.HashSet<String> seen = new java.util.HashSet<String>();
+        for (Item it : items) {
+            String t = it.text;
+            Matcher m = PAIR.matcher(t);
+            boolean found = false;
+            while (m.find()) { found = true; addPair(pairs, seen, m.group(1), m.group(2), m.group(3), m.group(4)); }
+            if (found) continue;
+            m = PAIR_KM_MIN.matcher(t);
+            while (m.find()) { found = true; addPair(pairs, seen, m.group(3), m.group(4), m.group(1), m.group(2)); }
+            if (found) continue;
+            m = PAIR_MIN_KM.matcher(t);
+            while (m.find()) { addPair(pairs, seen, m.group(1), m.group(2), m.group(3), m.group(4)); }
+        }
+        if (pairs.isEmpty()) { // textos separados: "3 min" + "(0.6 km)"
+            Matcher m = PAIR.matcher(all);
+            while (m.find()) addPair(pairs, seen, m.group(1), m.group(2), m.group(3), m.group(4));
         }
 
         if (!pairs.isEmpty()) {
@@ -102,6 +123,15 @@ public class Parser {
         }
         o.valid = o.price > 0 && o.km > 0.05;
         return o;
+    }
+
+    static void addPair(List<double[]> pairs, java.util.HashSet<String> seen, String h, String mi, String dist, String unit) {
+        double min = (h != null ? Integer.parseInt(h) * 60 : 0) + Integer.parseInt(mi);
+        double km = num(dist);
+        if (unit.equalsIgnoreCase("m")) km /= 1000.0;
+        if (km <= 0 || km > 300 || min > 600) return;
+        String key = Math.round(min) + "|" + Math.round(km * 10);
+        if (seen.add(key)) pairs.add(new double[]{min, km});
     }
 
     /** Quita textos repetidos y contenedores que solo repiten el texto de sus hijos. */
@@ -159,7 +189,7 @@ public class Parser {
 
     static long money(String s) {
         s = s.trim();
-        if (s.matches(".*[.,]\\d{2}$")) s = s.substring(0, s.length() - 3); // centavos
+        if (s.matches(".*[.,]\\d{1,2}$") && !s.matches("\\d{1,3}[.,]\\d{3}")) s = s.replaceAll("[.,]\\d{1,2}$", ""); // decimales
         String d = s.replaceAll("\\D", "");
         if (d.isEmpty()) return 0;
         try { return Long.parseLong(d); } catch (Exception e) { return 0; }

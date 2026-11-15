@@ -19,9 +19,17 @@ public class CardBuilder {
     static final int BOX_OK = 0x33FFFFFF, BOX_BAD = 0xFF8E0000;
 
     public static View build(Context c, Parser.Offer o, Prefs p, View.OnClickListener onClose) {
-        boolean okKm = o.perKm() >= p.minPerKm;
+        // ganancia final = precio - comisión - retención (15,25%) - combustible
+        double com = o.price * p.commission(o.app) / 100.0;
+        double ret = (o.price - com) * p.retencion / 100.0;
+        double fuel = p.costPerKm * o.km;
+        double net = o.price - com - ret - fuel;
+        double netKm = o.km > 0 ? net / o.km : 0;
+        double netH = o.min > 0 ? net / (o.min / 60.0) : 0;
+
+        boolean okKm = netKm >= p.minPerKm;
         boolean hasH = o.min > 0;
-        boolean okH = !hasH || o.perHour() >= p.minPerHour;
+        boolean okH = !hasH || netH >= p.minPerHour;
         boolean usePick = p.maxPickupKm > 0 && o.pickupKm >= 0;
         boolean okPick = !usePick || o.pickupKm <= p.maxPickupKm;
 
@@ -59,13 +67,21 @@ public class CardBuilder {
         // fila 2: total
         LinearLayout r2 = new LinearLayout(c);
         r2.setGravity(Gravity.BOTTOM);
-        TextView lt = tv(c, "TOTAL ", 13, false);
-        TextView tot = tv(c, Parser.clp(o.price), 30, true);
+        TextView lt = tv(c, "GANAS ", 13, false);
+        TextView tot = tv(c, Parser.clp(net), 30, true);
         TextView chk = tv(c, fails.isEmpty() ? "  ✓✓" : "  ✗", 22, true);
         r2.addView(lt);
         r2.addView(tot);
         r2.addView(chk);
         root.addView(r2);
+
+        StringBuilder det = new StringBuilder("Tarifa " + Parser.clp(o.price));
+        if (com > 0) det.append(" · comisión −").append(Parser.clp(com));
+        if (ret > 0) det.append(" · retención −").append(Parser.clp(ret));
+        if (fuel > 0) det.append(" · bencina −").append(Parser.clp(fuel));
+        TextView dt = tv(c, det.toString(), 12, false);
+        dt.setAlpha(0.9f);
+        root.addView(dt);
 
         String status = fails.isEmpty() ? "TODOS LOS FILTROS CUMPLEN" : "NO CUMPLE: " + join(fails);
         TextView st = tv(c, status, 13, false);
@@ -74,23 +90,17 @@ public class CardBuilder {
 
         // fila 3: recuadros
         LinearLayout r3 = new LinearLayout(c);
-        r3.addView(box(c, (okKm ? "✓ " : "✗ ") + Parser.clp(o.perKm()) + "/km",
-                "Mín. " + Parser.clp(p.minPerKm), okKm), boxLp(c, false));
+        r3.addView(box(c, (okKm ? "✓ " : "✗ ") + Parser.clp(netKm) + "/km",
+                "Mín. " + Parser.clp(p.minPerKm) + "\nBruto " + Parser.clp(o.perKm()), okKm), boxLp(c, false));
         if (hasH) {
-            r3.addView(box(c, (okH ? "✓ " : "✗ ") + Parser.clp(o.perHour()) + "/h",
-                    "Mín. " + Parser.clp(p.minPerHour), okH), boxLp(c, false));
+            r3.addView(box(c, (okH ? "✓ " : "✗ ") + Parser.clp(netH) + "/h",
+                    "Mín. " + Parser.clp(p.minPerHour) + "\nBruto " + Parser.clp(o.perHour()), okH), boxLp(c, false));
         }
         String sub = Parser.km(o.km) + " km total";
         if (o.pickupKm >= 0) sub += "\nRecogida " + Parser.km(o.pickupKm) + " km";
         r3.addView(box(c, "⏱ " + (hasH ? Parser.mins(o.min) : "-- min"), sub, okPick), boxLp(c, true));
         root.addView(r3);
 
-        if (p.costPerKm > 0) {
-            double fuel = p.costPerKm * o.km;
-            TextView neto = tv(c, "Neto " + Parser.clp(o.price - fuel) + "  ·  combustible " + Parser.clp(fuel), 13, true);
-            neto.setPadding(0, dp(c, 6), 0, 0);
-            root.addView(neto);
-        }
         return root;
     }
 
