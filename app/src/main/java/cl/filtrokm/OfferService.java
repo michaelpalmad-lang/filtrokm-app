@@ -46,7 +46,55 @@ public class OfferService extends AccessibilityService {
         prefs = Prefs.load(this);
         instance = this;
         paused = Prefs.sp(this).getBoolean("paused", false);
-        showBubble();
+        if (!Prefs.sp(this).getBoolean("off", false)) showBubble();
+        else paused = true;
+    }
+
+    /** Encender (burbuja + lectura) o apagar todo. */
+    public void setOn(boolean on) {
+        paused = !on;
+        Prefs.sp(this).edit().putBoolean("off", !on).putBoolean("paused", !on).apply();
+        if (on) { showBubble(); paintBubble(); }
+        else {
+            hide();
+            removeTarget();
+            if (bubble != null) { try { wm.removeView(bubble); } catch (Exception ignored) { } bubble = null; }
+        }
+    }
+
+    // zona "✕" para cerrar arrastrando
+    View target;
+    void showTarget() {
+        if (target != null) return;
+        android.widget.TextView t = new android.widget.TextView(this);
+        t.setText("✕");
+        t.setTextSize(26);
+        t.setTextColor(0xFFFFFFFF);
+        t.setGravity(Gravity.CENTER);
+        android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+        g.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        g.setColor(0xCC000000);
+        g.setStroke(CardBuilder.dp(this, 2), 0xFFFFFFFF);
+        t.setBackground(g);
+        int size = CardBuilder.dp(this, 64);
+        WindowManager.LayoutParams tl = new WindowManager.LayoutParams(size, size,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                PixelFormat.TRANSLUCENT);
+        tl.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        tl.y = CardBuilder.dp(this, 70);
+        target = t;
+        try { wm.addView(target, tl); } catch (Exception e) { target = null; }
+    }
+    void removeTarget() {
+        if (target != null) { try { wm.removeView(target); } catch (Exception ignored) { } target = null; }
+    }
+    boolean overTarget(float rawX, float rawY) {
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        float cx = dm.widthPixels / 2f;
+        float cy = dm.heightPixels - CardBuilder.dp(this, 102);
+        float r = CardBuilder.dp(this, 70);
+        return Math.abs(rawX - cx) < r && Math.abs(rawY - cy) < r;
     }
 
     // ---------- burbuja flotante: muestra que el lector está prendido ----------
@@ -82,6 +130,7 @@ public class OfferService extends AccessibilityService {
                         float dx = ev.getRawX() - rx, dy = ev.getRawY() - ry;
                         if (Math.abs(dx) > slop || Math.abs(dy) > slop) { moved = true; h.removeCallbacks(longPress); }
                         if (moved) {
+                            showTarget();
                             blp.x = Math.max(0, sx + (int) dx);
                             blp.y = Math.max(0, sy + (int) dy);
                             try { wm.updateViewLayout(bubble, blp); } catch (Exception ignored) { }
@@ -89,6 +138,12 @@ public class OfferService extends AccessibilityService {
                         return true;
                     case MotionEvent.ACTION_UP:
                         h.removeCallbacks(longPress);
+                        removeTarget();
+                        if (moved && overTarget(ev.getRawX(), ev.getRawY())) {
+                            setOn(false);
+                            android.widget.Toast.makeText(OfferService.this, "FiltroKM apagado. Ábrelo para encender.", android.widget.Toast.LENGTH_LONG).show();
+                            return true;
+                        }
                         if (!moved) togglePause();
                         else Prefs.sp(OfferService.this).edit().putInt("bubbleX", blp.x).putInt("bubbleY", blp.y).apply();
                         return true;
@@ -281,6 +336,7 @@ public class OfferService extends AccessibilityService {
     @Override
     public void onDestroy() {
         hide();
+        removeTarget();
         if (bubble != null) { try { wm.removeView(bubble); } catch (Exception ignored) { } bubble = null; }
         instance = null;
         super.onDestroy();

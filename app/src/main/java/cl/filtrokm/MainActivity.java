@@ -32,6 +32,7 @@ public class MainActivity extends Activity {
 
     LinearLayout col;
     TextView status;
+    Button power;
     EditText eKm, eHora, ePick, eCost, eComU, eComD, eComDP, eComI, eRetU, eRetD, eRetI, ePkgs, eTest;
     LinearLayout preview;
     TextView diag;
@@ -63,6 +64,17 @@ public class MainActivity extends Activity {
         button("Abrir Accesibilidad", new View.OnClickListener() {
             public void onClick(View v) { startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); }
         });
+        power = new Button(this);
+        power.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (OfferService.instance == null) { toast("Primero activa el lector en Accesibilidad"); return; }
+                boolean off = Prefs.sp(MainActivity.this).getBoolean("off", false);
+                OfferService.instance.setOn(off);
+                toast(off ? "FiltroKM encendido" : "FiltroKM apagado");
+                onResume();
+            }
+        });
+        col.addView(power);
         button("Probar ventana flotante", new View.OnClickListener() {
             public void onClick(View v) {
                 if (OfferService.instance == null) { toast("Primero activa el lector en Accesibilidad"); return; }
@@ -70,7 +82,7 @@ public class MainActivity extends Activity {
                 toast("Así se verá cuando llegue una oferta");
             }
         });
-        TextView bubbleHelp = text("Con el lector activo verás una burbuja verde \"$/km\" flotando. Tócala para pausar (gris \"OFF\") o reanudar; mantenla presionada para abrir esta pantalla; arrástrala para moverla.", 13);
+        TextView bubbleHelp = text("Con el lector activo verás una burbuja verde \"$/km\" flotando. Tócala para pausar (gris \"OFF\") o reanudar; mantenla presionada para abrir esta pantalla; arrástrala para moverla. Para apagarla del todo, arrástrala hasta la ✕ de abajo o usa el botón Apagar.", 13);
         bubbleHelp.setTextColor(Color.GRAY);
         col.addView(bubbleHelp);
         TextView help = text("En Accesibilidad busca \"FiltroKM\" y actívalo. Si aparece \"Ajuste restringido\": "
@@ -130,7 +142,9 @@ public class MainActivity extends Activity {
         super.onResume();
         boolean on = serviceOn();
         boolean paused = Prefs.sp(this).getBoolean("paused", false);
-        status.setText(!on ? "✗ Lector desactivado" : (paused ? "⏸ Lector en pausa (toca la burbuja para reanudar)" : "✓ Lector ACTIVO"));
+        boolean off = Prefs.sp(this).getBoolean("off", false);
+        status.setText(!on ? "✗ Lector desactivado en Accesibilidad" : (off ? "⏻ FiltroKM APAGADO" : (paused ? "⏸ En pausa (toca la burbuja para reanudar)" : "✓ FiltroKM ENCENDIDO")));
+        power.setText(off ? "ENCENDER FiltroKM" : "APAGAR FiltroKM");
         status.setTextColor(on ? 0xFF2E7D32 : 0xFFC62828);
         // al abrir la app: revisa si hay versión nueva y se actualiza sola
         if (System.currentTimeMillis() - lastCheck > 10 * 60 * 1000L) checkUpdate(true);
