@@ -1,0 +1,39 @@
+plugins {
+    id 'com.android.application'
+}
+
+def runNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+
+android {
+    namespace 'cl.filtrokm'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'cl.filtrokm'
+        minSdk 23
+        targetSdk 34
+        versionCode runNumber + 1
+        versionName "1.${runNumber}"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('filtrokm.jks')
+            storePassword 'filtrokm123'
+            keyAlias 'filtrokm'
+            keyPassword 'filtrokm123'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
