@@ -50,48 +50,69 @@ public class MainActivity extends Activity {
         sv.addView(col);
         setContentView(sv);
 
-        title("FiltroKM " + Updater.currentName(this));
+        // ---------- encabezado ----------
+        TextView head = text("FiltroKM", 26);
+        head.setTypeface(Typeface.DEFAULT_BOLD);
+        col.addView(head);
+        TextView ver = text("Versión " + Updater.currentName(this), 12);
+        ver.setTextColor(Color.GRAY);
+        col.addView(ver);
         upd = text("", 13);
         upd.setTextColor(0xFF2E7D32);
         col.addView(upd);
-        button("Buscar actualización", new View.OnClickListener() {
-            public void onClick(View v) { checkUpdate(false); }
-        });
 
-        title("1. Activar lector de pantalla");
-        status = text("", 15);
-        col.addView(status);
-        button("Abrir Accesibilidad", new View.OnClickListener() {
-            public void onClick(View v) { startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); }
-        });
+        // ---------- botón grande ----------
         power = new Button(this);
+        power.setTextSize(20);
+        power.setTypeface(Typeface.DEFAULT_BOLD);
+        power.setTextColor(Color.WHITE);
+        power.setAllCaps(false);
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, CardBuilder.dp(this, 72));
+        plp.topMargin = CardBuilder.dp(this, 14);
+        plp.bottomMargin = CardBuilder.dp(this, 6);
+        power.setLayoutParams(plp);
         power.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if (OfferService.instance == null) { toast("Primero activa el lector en Accesibilidad"); return; }
-                boolean off = Prefs.sp(MainActivity.this).getBoolean("off", false);
-                OfferService.instance.setOn(off);
-                toast(off ? "FiltroKM encendido" : "FiltroKM apagado");
+                if (!serviceOn() || OfferService.instance == null) {
+                    toast("Activa FiltroKM en Accesibilidad → Aplicaciones instaladas");
+                    startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                    return;
+                }
+                boolean running = !Prefs.sp(MainActivity.this).getBoolean("off", false)
+                        && !Prefs.sp(MainActivity.this).getBoolean("paused", false);
+                OfferService.instance.setOn(!running);
+                toast(running ? "Monitoreo detenido" : "Monitoreo iniciado");
                 onResume();
             }
         });
         col.addView(power);
+        status = text("", 14);
+        col.addView(status);
+
+        // ---------- apps ----------
+        title("Apps en monitoreo");
+        final SharedPreferences spp = Prefs.sp(this);
+        appSwitch("Uber", "appUber", spp);
+        appSwitch("DiDi", "appDidi", spp);
+        appSwitch("inDrive", "appIndrive", spp);
+
+        TextView legend = text("🟢 Verde: te conviene   🟠 Naranjo: $/km bien, falla otro filtro   🔴 Rojo: no te conviene", 13);
+        legend.setPadding(0, CardBuilder.dp(this, 10), 0, 0);
+        col.addView(legend);
+
         button("Probar ventana flotante", new View.OnClickListener() {
             public void onClick(View v) {
-                if (OfferService.instance == null) { toast("Primero activa el lector en Accesibilidad"); return; }
+                if (OfferService.instance == null) { toast("Primero activa FiltroKM en Accesibilidad"); return; }
                 OfferService.instance.showDemo();
                 toast("Así se verá cuando llegue una oferta");
             }
         });
-        TextView bubbleHelp = text("Con el lector activo verás una burbuja verde \"$/km\" flotando. Tócala para abrir el menú: Abrir FiltroKM, Pausar/Reanudar o Apagar. Arrástrala para moverla, o hasta la ✕ de abajo para apagarla.", 13);
+        TextView bubbleHelp = text("Burbuja flotante: tócala para abrir el menú (Abrir FiltroKM, Pausar/Reanudar, Apagar). Arrástrala para moverla, o hasta la ✕ de abajo para apagarla.", 13);
         bubbleHelp.setTextColor(Color.GRAY);
         col.addView(bubbleHelp);
-        TextView help = text("En Accesibilidad busca \"FiltroKM\" y actívalo. Si aparece \"Ajuste restringido\": "
-                + "Ajustes > Apps > FiltroKM > menú ⋮ > \"Permitir ajustes restringidos\", y vuelve a intentarlo.", 13);
-        help.setTextColor(Color.GRAY);
-        col.addView(help);
 
         Prefs pr = Prefs.load(this);
-        title("2. Filtros (sobre lo que realmente ganas)");
+        title("Filtros (sobre lo que realmente ganas)");
         eKm = field("Mínimo $ por km", fmt(pr.minPerKm), true);
         eHora = field("Mínimo $ por hora", fmt(pr.minPerHour), true);
         ePick = field("Máximo km de recogida (0 = sin filtro)", fmt(pr.maxPickupKm), true);
@@ -104,12 +125,12 @@ public class MainActivity extends Activity {
         eRetD = field("Retención DiDi % (boleta honorarios 2026: 15,25)", fmt(pr.retDidi), true);
         eRetI = field("Retención inDrive % (no retiene: 0)", fmt(pr.retIndrive), true);
         eCost = field("Costo bencina por km (0 = no descontar)", fmt(pr.costPerKm), true);
-        ePkgs = field("Apps a vigilar (una por línea)", pr.pkgs, false);
+        ePkgs = field("Avanzado: otros paquetes a vigilar (uno por línea)", pr.pkgs, false);
         button("Guardar", new View.OnClickListener() {
             public void onClick(View v) { save(); runTest(); toast("Guardado"); }
         });
 
-        title("3. Probar");
+        title("Probar con texto");
         eTest = field("Texto de una oferta", SAMPLE, false);
         button("Analizar texto", new View.OnClickListener() {
             public void onClick(View v) { runTest(); }
@@ -119,7 +140,19 @@ public class MainActivity extends Activity {
         preview.setPadding(0, CardBuilder.dp(this, 8), 0, 0);
         col.addView(preview);
 
-        title("4. Diagnóstico (última pantalla leída)");
+        title("Permisos y actualización");
+        button("Abrir Accesibilidad", new View.OnClickListener() {
+            public void onClick(View v) { startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); }
+        });
+        TextView help = text("En Accesibilidad → Aplicaciones instaladas activa \"FiltroKM\". Si aparece \"Ajuste restringido\": "
+                + "Ajustes > Aplicaciones > FiltroKM > ⋮ > \"Permitir ajustes restringidos\".", 13);
+        help.setTextColor(Color.GRAY);
+        col.addView(help);
+        button("Buscar actualización", new View.OnClickListener() {
+            public void onClick(View v) { checkUpdate(false); }
+        });
+
+        title("Diagnóstico (última pantalla leída)");
         diag = text("", 11);
         diag.setTypeface(Typeface.MONOSPACE);
         diag.setTextIsSelectable(true);
@@ -143,15 +176,44 @@ public class MainActivity extends Activity {
         boolean on = serviceOn();
         boolean paused = Prefs.sp(this).getBoolean("paused", false);
         boolean off = Prefs.sp(this).getBoolean("off", false);
-        status.setText(!on ? "✗ Lector desactivado en Accesibilidad" : (off ? "⏻ FiltroKM APAGADO" : (paused ? "⏸ En pausa (toca la burbuja para reanudar)" : "✓ FiltroKM ENCENDIDO")));
-        power.setText(off ? "ENCENDER FiltroKM" : "APAGAR FiltroKM");
-        status.setTextColor(on ? 0xFF2E7D32 : 0xFFC62828);
+        boolean running = on && OfferService.instance != null && !off && !paused;
+        android.graphics.drawable.GradientDrawable pg = new android.graphics.drawable.GradientDrawable();
+        pg.setCornerRadius(CardBuilder.dp(this, 16));
+        if (!on) {
+            power.setText("Activar FiltroKM (Accesibilidad)");
+            pg.setColor(0xFF1565C0);
+            status.setText("FiltroKM aún no tiene permiso para leer las ofertas.");
+        } else if (running) {
+            power.setText("⏹  Detener monitoreo");
+            pg.setColor(0xFF424242);
+            status.setText("✓ Monitoreando ofertas. Burbuja verde activa.");
+        } else {
+            power.setText("▶  Iniciar monitoreo");
+            pg.setColor(0xFF2E7D32);
+            status.setText(paused && !off ? "⏸ En pausa" : "Detenido");
+        }
+        power.setBackground(pg);
+        status.setTextColor(running ? 0xFF2E7D32 : (on ? 0xFF616161 : 0xFFC62828));
         // al abrir la app: revisa si hay versión nueva y se actualiza sola
         if (System.currentTimeMillis() - lastCheck > 10 * 60 * 1000L) checkUpdate(true);
         SharedPreferences sp = Prefs.sp(this);
         String ok = sp.getString("diagOk", null);
         String last = sp.getString("diag", null);
         diag.setText(ok != null ? ok : (last != null ? last : "Aún no hay capturas. Abre Uber/DiDi/inDrive con el lector activo."));
+    }
+
+    void appSwitch(String label, final String key, final SharedPreferences sp) {
+        android.widget.Switch sw = new android.widget.Switch(this);
+        sw.setText(label);
+        sw.setTextSize(18);
+        sw.setPadding(0, CardBuilder.dp(this, 6), 0, CardBuilder.dp(this, 6));
+        sw.setChecked(sp.getBoolean(key, true));
+        sw.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
+                sp.edit().putBoolean(key, checked).apply();
+            }
+        });
+        col.addView(sw);
     }
 
     void checkUpdate(boolean silent) {

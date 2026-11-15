@@ -18,6 +18,7 @@ public class Prefs {
     public double comUber, comDidi, comDidiPtp, comIndrive; // % comisión a descontar del precio mostrado
     public double retUber, retDidi, retIndrive; // % retención boleta honorarios (Uber/DiDi 15,25; inDrive no retiene)
     public String pkgs;
+    public boolean appUber, appDidi, appIndrive;
     public int overlayY;
 
     public static SharedPreferences sp(Context c) {
@@ -45,6 +46,9 @@ public class Prefs {
         r.retUber = getD(p, "retUber", retOld);
         r.retDidi = getD(p, "retDidi", retOld);
         r.retIndrive = getD(p, "retIndrive", 0);
+        r.appUber = p.getBoolean("appUber", true);
+        r.appDidi = p.getBoolean("appDidi", true);
+        r.appIndrive = p.getBoolean("appIndrive", true);
         r.pkgs = p.getString("pkgs", DEFAULT_PKGS);
         r.overlayY = p.getInt("overlayY", 80);
         return r;
@@ -75,7 +79,9 @@ public class Prefs {
     public boolean isTarget(String pkg) {
         if (pkg == null) return false;
         String lp = pkg.toLowerCase();
-        if (lp.contains("didi") && lp.contains("driver")) return true;
+        if (lp.equals("com.ubercab.driver")) return appUber;
+        if (lp.contains("didi") && lp.contains("driver")) return appDidi;
+        if (lp.equals("sinet.startup.indriver")) return appIndrive;
         for (String s : pkgs.split("[\\n,; ]+")) {
             s = s.trim();
             if (s.length() > 2 && pkg.equalsIgnoreCase(s)) return true;

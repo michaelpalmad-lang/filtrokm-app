@@ -65,6 +65,8 @@ public class CardBuilder {
         StringBuilder sb3 = new StringBuilder(Parser.km(o.km) + " km");
         if (o.pickupKm >= 0) sb3.append(" (").append(Parser.km(o.pickupKm)).append(" recogida)");
         if (hasH) sb3.append("  ·  ").append(Parser.mins(o.min));
+        if ("Efectivo".equals(o.pago)) sb3.append("  ·  💵 Efectivo");
+        else if ("Tarjeta".equals(o.pago)) sb3.append("  ·  💳 Tarjeta");
         TextView l3 = tv(c, sb3.toString(), 15, false);
         l3.setAlpha(0.92f);
         root.addView(l3);

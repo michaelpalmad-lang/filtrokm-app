@@ -23,7 +23,8 @@ public class Parser {
 
     public static class Offer {
         public String app = "";
-        public boolean ponTuPrecio; // DiDi "Pon Tu Precio": el precio es lo que paga el pasajero
+        public boolean ponTuPrecio;
+        public String pago = ""; // "Tarjeta" / "Efectivo" // DiDi "Pon Tu Precio": el precio es lo que paga el pasajero
         public long price;
         public double km;
         public double min;
@@ -122,7 +123,10 @@ public class Parser {
                 firstMin = false;
             }
         }
-        o.ponTuPrecio = all.toLowerCase(Locale.ROOT).contains("pon tu precio");
+        String low = all.toLowerCase(Locale.ROOT);
+        o.ponTuPrecio = low.contains("pon tu precio");
+        if (low.contains("efectivo")) o.pago = "Efectivo";
+        else if (low.contains("tarjeta") || low.contains("pago en línea") || low.contains("pago móvil")) o.pago = "Tarjeta";
         o.valid = o.price > 0 && o.km > 0.05;
         return o;
     }
