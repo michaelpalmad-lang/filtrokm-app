@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="acc_desc">Lee en pantalla las ofertas de viaje de Uber, DiDi e inDrive (precio, km y minutos) para mostrar una ventana flotante con el valor por kilómetro y por hora. No guarda ni envía datos fuera del teléfono.</string>
+</resources>
