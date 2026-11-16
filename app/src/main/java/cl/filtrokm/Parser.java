@@ -151,7 +151,7 @@ public class Parser {
         o.hasAccept = all.toLowerCase(Locale.ROOT).contains("aceptar por");
         String low = all.toLowerCase(Locale.ROOT);
         o.ponTuPrecio = low.contains("pon tu precio");
-        if (low.contains("efectivo")) o.pago = "Efectivo";
+        if (low.contains("efectivo") || low.contains("efecti")) o.pago = "Efectivo";
         else if (low.contains("tarjeta") || low.contains("pago en línea") || low.contains("pago móvil")) o.pago = "Tarjeta";
         o.valid = o.price > 0 && o.km > 0.05;
         return o;

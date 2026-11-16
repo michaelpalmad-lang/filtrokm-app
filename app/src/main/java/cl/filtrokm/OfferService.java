@@ -307,11 +307,18 @@ public class OfferService extends AccessibilityService {
         if ("inDrive".equals(o.app) && !o.hasAccept) { scheduleHide(); return; }
 
         // Falta la distancia del viaje en el texto (ej. inDrive la dibuja en el mapa): leer la imagen
-        if (o.price > 0 && o.pairs == 0 && OcrHelper.supported()) {
-            final String key = pkg + "|" + o.price;
-            if (key.equals(lastOcrKey) && lastOcrOffer != null) { handle(lastOcrOffer); return; }
+        // DiDi no entrega texto a la accesibilidad: si la pantalla viene casi vacía, leer la imagen
+        boolean emptyScreen = o.price == 0 && items.size() < 6;
+        if (OcrHelper.supported() && ((o.price > 0 && o.pairs == 0) || emptyScreen)) {
+            final String key = emptyScreen ? "" : pkg + "|" + o.price;
+            if (!emptyScreen && key.equals(lastOcrKey) && lastOcrOffer != null) { handle(lastOcrOffer); return; }
             long now = SystemClock.uptimeMillis();
-            if (ocrBusy || now - lastOcr < 1200) return;
+            long gap = emptyScreen ? (card != null ? 1500 : 2000) : 1200;
+            if (ocrBusy || now - lastOcr < gap) {
+                // volver a intentar cuando pase el intervalo, aunque no lleguen más eventos
+                if (emptyScreen && !pending) { pending = true; h.postDelayed(analyzeR, gap); }
+                return;
+            }
             ocrBusy = true;
             lastOcr = now;
             final List<Parser.Item> base = items;
@@ -332,7 +339,7 @@ public class OfferService extends AccessibilityService {
                     o2.viaOcr = true;
                     if (o2.price == 0) o2 = fallback;
                     saveDiag(fpkg + " +imagen", all, o2);
-                    if (!o2.partial()) { lastOcrKey = key; lastOcrOffer = o2; }
+                    if (!o2.partial() && key.length() > 0) { lastOcrKey = key; lastOcrOffer = o2; }
                     handle(o2);
                 }
             });
