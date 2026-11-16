@@ -58,8 +58,12 @@ public class MainActivity extends Activity {
         TextView ver = text("Versión " + Updater.currentName(this), 12);
         ver.setTextColor(Color.GRAY);
         col.addView(ver);
-        upd = text("", 13);
+        button("Buscar actualización", new View.OnClickListener() {
+            public void onClick(View v) { checkUpdate(false); }
+        });
+        upd = text("", 14);
         upd.setTextColor(0xFF2E7D32);
+        upd.setTypeface(Typeface.DEFAULT_BOLD);
         col.addView(upd);
 
         // ---------- botón grande ----------
@@ -152,9 +156,6 @@ public class MainActivity extends Activity {
                 + "Ajustes > Aplicaciones > FiltroKM > ⋮ > \"Permitir ajustes restringidos\".", 13);
         help.setTextColor(Color.GRAY);
         col.addView(help);
-        button("Buscar actualización", new View.OnClickListener() {
-            public void onClick(View v) { checkUpdate(false); }
-        });
 
         title("Apps que ve FiltroKM (✓ = vigilada)");
         seen = text("", 12);
@@ -237,8 +238,12 @@ public class MainActivity extends Activity {
 
     void checkUpdate(boolean silent) {
         lastCheck = System.currentTimeMillis();
+        final boolean showToast = !silent;
         Updater.run(this, silent, new Updater.Listener() {
-            public void status(String msg) { upd.setText(msg); }
+            public void status(String msg) {
+                upd.setText(msg);
+                if (showToast && msg.length() > 0) toast(msg);
+            }
         });
     }
 
