@@ -137,6 +137,24 @@ public class Parser {
                 firstMin = false;
             }
         }
+        // inDrive: recogida = "~X km" de la tarjeta; viaje = etiqueta del mapa con otra distancia.
+        // Se arma el total solo con esos dos, sin sumar nada repetido.
+        Matcher tl3 = Pattern.compile("~\\s*(\\d+(?:[.,]\\d+)?)\\s*km", Pattern.CASE_INSENSITIVE).matcher(all);
+        if (tl3.find() && !pairs.isEmpty()) {
+            double pk = num(tl3.group(1));
+            double[] pick = null, trip = null;
+            for (double[] pp : pairs) {
+                if (Math.abs(pp[1] - pk) < 0.05) { if (pick == null || pp[0] > pick[0]) pick = pp; }
+                else if (trip == null || pp[1] > trip[1] + 0.05
+                        || (Math.abs(pp[1] - trip[1]) < 0.05 && pp[0] > trip[0])) trip = pp;
+            }
+            if (trip != null) {
+                o.pickupKm = pk;
+                o.pickupMin = pick != null ? pick[0] : -1;
+                o.km = pk + trip[1];
+                o.min = (pick != null ? pick[0] : 0) + trip[0];
+            }
+        }
         o.pairs = pairs.size();
         // inDrive: si todos los pares encontrados son la recogida ("~X km"), falta el viaje
         Matcher tl2 = Pattern.compile("~\\s*(\\d+(?:[.,]\\d+)?)\\s*km", Pattern.CASE_INSENSITIVE).matcher(all);
