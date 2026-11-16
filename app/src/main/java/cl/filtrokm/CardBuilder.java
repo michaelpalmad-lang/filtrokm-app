@@ -19,6 +19,7 @@ public class CardBuilder {
     static final int BOX_OK = 0x33FFFFFF, BOX_BAD = 0xFF8E0000;
 
     public static View build(Context c, Parser.Offer o, Prefs p, View.OnClickListener onClose) {
+        if (o.partial()) return buildPartial(c, o, p, onClose);
         // ganancia final = precio - comisión - retención (solo Uber/DiDi) - combustible
         double com = o.price * p.commission(o.app, o.ponTuPrecio) / 100.0;
         double ret = (o.price - com) * p.retention(o.app) / 100.0;
@@ -76,6 +77,34 @@ public class CardBuilder {
             l4.setAlpha(0.85f);
             root.addView(l4);
         }
+        return root;
+    }
+
+    /** Falta la distancia/tiempo del viaje: no se da veredicto, tarjeta gris. */
+    static View buildPartial(Context c, Parser.Offer o, Prefs p, View.OnClickListener onClose) {
+        double com = o.price * p.commission(o.app, o.ponTuPrecio) / 100.0;
+        double ret = (o.price - com) * p.retention(o.app) / 100.0;
+        double net = o.price - com - ret;
+        LinearLayout root = new LinearLayout(c);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(c, 14), dp(c, 8), dp(c, 8), dp(c, 12));
+        root.setBackground(round(c, 0xFF616161, 18, 0));
+        root.setElevation(dp(c, 6));
+        LinearLayout r1 = new LinearLayout(c);
+        r1.setGravity(Gravity.CENTER_VERTICAL);
+        TextView big = tv(c, "? $/km", 34, true);
+        r1.addView(big, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        if (onClose != null) {
+            TextView x = tv(c, "✕", 20, true);
+            x.setPadding(dp(c, 12), 0, dp(c, 6), dp(c, 12));
+            x.setOnClickListener(onClose);
+            r1.addView(x);
+        }
+        root.addView(r1);
+        root.addView(tv(c, "Ganas " + Parser.clp(net), 20, true));
+        TextView l3 = tv(c, "Falta la distancia del viaje (solo veo " + Parser.km(o.km) + " km)", 14, false);
+        l3.setAlpha(0.9f);
+        root.addView(l3);
         return root;
     }
 

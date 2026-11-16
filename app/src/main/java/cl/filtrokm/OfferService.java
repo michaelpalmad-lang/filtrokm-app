@@ -303,6 +303,56 @@ public class OfferService extends AccessibilityService {
         o.app = Parser.appName(pkg);
         saveDiag(pkg, items, o);
 
+        // Falta la distancia del viaje en el texto (ej. inDrive la dibuja en el mapa): leer la imagen
+        if (o.price > 0 && o.pairs == 0 && OcrHelper.supported()) {
+            final String key = pkg + "|" + o.price;
+            if (key.equals(lastOcrKey) && lastOcrOffer != null) { handle(lastOcrOffer); return; }
+            long now = SystemClock.uptimeMillis();
+            if (ocrBusy || now - lastOcr < 1200) return;
+            ocrBusy = true;
+            lastOcr = now;
+            final List<Parser.Item> base = items;
+            final String fpkg = pkg;
+            final Parser.Offer fallback = o;
+            OcrHelper.capture(this, overlayRects(), new OcrHelper.Callback() {
+                public void done(List<Parser.Item> ocr) {
+                    ocrBusy = false;
+                    if (ocr == null) { handle(fallback); return; }
+                    List<Parser.Item> all = new ArrayList<Parser.Item>(base);
+                    all.addAll(ocr);
+                    Parser.Offer o2 = Parser.parse(all);
+                    o2.app = Parser.appName(fpkg);
+                    o2.viaOcr = true;
+                    if (o2.price == 0) o2 = fallback;
+                    saveDiag(fpkg + " +imagen", all, o2);
+                    lastOcrKey = key;
+                    lastOcrOffer = o2;
+                    handle(o2);
+                }
+            });
+            return;
+        }
+        handle(o);
+    }
+
+    String lastOcrKey = "";
+    Parser.Offer lastOcrOffer;
+    boolean ocrBusy;
+    long lastOcr;
+
+    List<Rect> overlayRects() {
+        List<Rect> r = new ArrayList<Rect>();
+        for (View v : new View[]{card, bubble, menu, target}) {
+            if (v == null) continue;
+            int[] loc = new int[2];
+            v.getLocationOnScreen(loc);
+            r.add(new Rect(loc[0], loc[1], loc[0] + v.getWidth(), loc[1] + v.getHeight()));
+        }
+        return r;
+    }
+
+    void handle(Parser.Offer o) {
+        if (paused) return;
         if (o.valid && o.sig().equals(dismissedSig)) return; // la cerró a mano
         if (o.valid) {
             h.removeCallbacks(hideR);

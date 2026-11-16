@@ -1,0 +1,95 @@
+package cl.filtrokm;
+
+import android.accessibilityservice.AccessibilityService;
+import android.graphics.Bitmap;
+import android.graphics.Rect;
+import android.os.Build;
+import android.view.Display;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Lee el texto dibujado en pantalla (por ejemplo, las etiquetas del mapa de inDrive
+ * "27 min / 25,0 km") cuando la accesibilidad no lo entrega. Todo ocurre en el teléfono.
+ */
+public class OcrHelper {
+
+    public interface Callback { void done(List<Parser.Item> items); }
+
+    static TextRecognizer rec;
+
+    public static boolean supported() { return Build.VERSION.SDK_INT >= 30; }
+
+    public static void capture(final AccessibilityService svc, final List<Rect> exclude, final Callback cb) {
+        if (!supported()) { cb.done(null); return; }
+        try {
+            svc.takeScreenshot(Display.DEFAULT_DISPLAY, svc.getMainExecutor(),
+                    new AccessibilityService.TakeScreenshotCallback() {
+                        @Override
+                        public void onSuccess(AccessibilityService.ScreenshotResult r) {
+                            Bitmap bmp = null;
+                            try {
+                                Bitmap hw = Bitmap.wrapHardwareBuffer(r.getHardwareBuffer(), r.getColorSpace());
+                                if (hw != null) bmp = hw.copy(Bitmap.Config.ARGB_8888, false);
+                                r.getHardwareBuffer().close();
+                            } catch (Exception ignored) { }
+                            if (bmp == null) { cb.done(null); return; }
+                            recognize(bmp, exclude, cb);
+                        }
+
+                        @Override
+                        public void onFailure(int errorCode) { cb.done(null); }
+                    });
+        } catch (Exception e) {
+            cb.done(null);
+        }
+    }
+
+    static void recognize(Bitmap bmp, final List<Rect> exclude, final Callback cb) {
+        try {
+            if (rec == null) rec = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+            rec.process(InputImage.fromBitmap(bmp, 0))
+                    .addOnSuccessListener(new OnSuccessListener<Text>() {
+                        @Override
+                        public void onSuccess(Text t) {
+                            List<Parser.Item> out = new ArrayList<Parser.Item>();
+                            for (Text.TextBlock b : t.getTextBlocks()) {
+                                Rect bb = b.getBoundingBox();
+                                if (bb != null && excluded(bb, exclude)) continue;
+                                StringBuilder sb = new StringBuilder();
+                                int h = 0;
+                                for (Text.Line l : b.getLines()) {
+                                    if (sb.length() > 0) sb.append(' ');
+                                    sb.append(l.getText());
+                                    Rect lb = l.getBoundingBox();
+                                    if (lb != null) h = Math.max(h, lb.height());
+                                }
+                                if (sb.length() > 0) out.add(new Parser.Item(sb.toString(), h));
+                            }
+                            cb.done(out);
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(Exception e) { cb.done(null); }
+                    });
+        } catch (Exception e) {
+            cb.done(null);
+        }
+    }
+
+    static boolean excluded(Rect r, List<Rect> ex) {
+        if (ex == null) return false;
+        for (Rect e : ex) if (Rect.intersects(r, e)) return true;
+        return false;
+    }
+}

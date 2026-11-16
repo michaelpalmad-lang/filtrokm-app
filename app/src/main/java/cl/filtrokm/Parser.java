@@ -31,6 +31,9 @@ public class Parser {
         public double pickupKm = -1;
         public double pickupMin = -1;
         public boolean valid;
+        public int pairs;          // pares tiempo/distancia encontrados
+        public boolean viaOcr;     // se completó leyendo la imagen de la pantalla
+        public boolean partial() { return pairs == 0 && min <= 0; } // falta distancia/tiempo del viaje
 
         public double perKm() { return km > 0 ? price / km : 0; }
         public double perHour() { return min > 0 ? price / (min / 60.0) : 0; }
@@ -103,7 +106,15 @@ public class Parser {
 
         if (!pairs.isEmpty()) {
             for (double[] p : pairs) { o.min += p[0]; o.km += p[1]; }
-            if (pairs.size() >= 2) { o.pickupMin = pairs.get(0)[0]; o.pickupKm = pairs.get(0)[1]; }
+            if (pairs.size() >= 2) {
+                int pi = 0;
+                Matcher tl = Pattern.compile("~\\s*(\\d+(?:[.,]\\d+)?)\\s*km", Pattern.CASE_INSENSITIVE).matcher(all);
+                if (tl.find()) { // inDrive: "~2,7 km" es la distancia de recogida
+                    double pk = num(tl.group(1));
+                    for (int i = 0; i < pairs.size(); i++) if (Math.abs(pairs.get(i)[1] - pk) < 0.05) { pi = i; break; }
+                }
+                o.pickupMin = pairs.get(pi)[0]; o.pickupKm = pairs.get(pi)[1];
+            }
         } else {
             List<Double> kms = new ArrayList<Double>();
             Matcher k = KM.matcher(all);
@@ -123,6 +134,7 @@ public class Parser {
                 firstMin = false;
             }
         }
+        o.pairs = pairs.size();
         String low = all.toLowerCase(Locale.ROOT);
         o.ponTuPrecio = low.contains("pon tu precio");
         if (low.contains("efectivo")) o.pago = "Efectivo";
