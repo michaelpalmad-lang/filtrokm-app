@@ -83,8 +83,8 @@ public class Prefs {
         if (pkg == null) return false;
         String lp = pkg.toLowerCase();
         if (lp.equals("com.ubercab.driver")) return appUber;
-        if (lp.contains("didi") && lp.contains("driver")) return appDidi;
-        if (lp.equals("sinet.startup.indriver")) return appIndrive;
+        if (lp.contains("didi")) return appDidi;
+        if (lp.equals("sinet.startup.indriver") || lp.contains("indrive")) return appIndrive;
         for (String s : pkgs.split("[\\n,; ]+")) {
             s = s.trim();
             if (s.length() > 2 && pkg.equalsIgnoreCase(s)) return true;

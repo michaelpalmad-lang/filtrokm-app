@@ -37,6 +37,7 @@ public class MainActivity extends Activity {
     LinearLayout preview;
     TextView diag;
     TextView upd;
+    TextView seen;
     static long lastCheck;
 
     @Override
@@ -155,6 +156,12 @@ public class MainActivity extends Activity {
             public void onClick(View v) { checkUpdate(false); }
         });
 
+        title("Apps que ve FiltroKM (✓ = vigilada)");
+        seen = text("", 12);
+        seen.setTypeface(Typeface.MONOSPACE);
+        seen.setTextIsSelectable(true);
+        col.addView(seen);
+
         title("Diagnóstico (última pantalla leída)");
         diag = text("", 11);
         diag.setTypeface(Typeface.MONOSPACE);
@@ -200,6 +207,7 @@ public class MainActivity extends Activity {
         // al abrir la app: revisa si hay versión nueva y se actualiza sola
         if (System.currentTimeMillis() - lastCheck > 10 * 60 * 1000L) checkUpdate(true);
         SharedPreferences sp = Prefs.sp(this);
+        seen.setText(sp.getString("seenPkgs", "Todavía nada. Abre Uber, DiDi o inDrive con el monitoreo encendido."));
         String ok = sp.getString("diagOk", null);
         String last = sp.getString("diag", null);
         diag.setText(ok != null ? ok : (last != null ? last : "Aún no hay capturas. Abre Uber/DiDi/inDrive con el lector activo."));

@@ -260,6 +260,7 @@ public class OfferService extends AccessibilityService {
         CharSequence p = e.getPackageName();
         String pkg = p == null ? null : p.toString();
         if (getPackageName().equals(pkg)) return;
+        notePackage(pkg);
         if (paused) return;
         if (e.getEventType() != AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
             if (prefs == null) prefs = Prefs.load(this);
@@ -310,6 +311,27 @@ public class OfferService extends AccessibilityService {
         } else {
             scheduleHide();
         }
+    }
+
+    // registra qué apps ve el lector (para diagnóstico)
+    final java.util.LinkedHashMap<String, Long> seenPkgs = new java.util.LinkedHashMap<String, Long>();
+    long lastPkgSave;
+    void notePackage(String pkg) {
+        if (pkg == null || pkg.startsWith("com.android.systemui") || pkg.equals("android")) return;
+        seenPkgs.remove(pkg);
+        seenPkgs.put(pkg, System.currentTimeMillis());
+        while (seenPkgs.size() > 12) seenPkgs.remove(seenPkgs.keySet().iterator().next());
+        long now = SystemClock.uptimeMillis();
+        if (now - lastPkgSave < 2000) return;
+        lastPkgSave = now;
+        if (prefs == null) prefs = Prefs.load(this);
+        StringBuilder sb = new StringBuilder();
+        java.util.List<String> keys = new java.util.ArrayList<String>(seenPkgs.keySet());
+        for (int i = keys.size() - 1; i >= 0; i--) {
+            String k = keys.get(i);
+            sb.append(prefs.isTarget(k) ? "✓ " : "· ").append(k).append('\n');
+        }
+        Prefs.sp(this).edit().putString("seenPkgs", sb.toString()).apply();
     }
 
     void scheduleHide() {
