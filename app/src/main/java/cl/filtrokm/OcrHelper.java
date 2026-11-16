@@ -62,6 +62,32 @@ public class OcrHelper {
                         @Override
                         public void onSuccess(Text t) {
                             List<Parser.Item> out = new ArrayList<Parser.Item>();
+                            List<Text.Line> lines = new ArrayList<Text.Line>();
+                            for (Text.TextBlock b : t.getTextBlocks()) {
+                                for (Text.Line l : b.getLines()) {
+                                    Rect lb = l.getBoundingBox();
+                                    if (lb != null && !excluded(lb, exclude)) lines.add(l);
+                                }
+                            }
+                            // etiquetas del mapa: "13 min" con "5,5 km" justo debajo → un solo par
+                            for (Text.Line a : lines) {
+                                String ta = a.getText().trim();
+                                if (!ta.matches("(?i)^\\d+\\s*min\\.?$")) continue;
+                                Rect ra = a.getBoundingBox();
+                                Text.Line best = null;
+                                int bestDy = Integer.MAX_VALUE;
+                                for (Text.Line b : lines) {
+                                    if (b == a) continue;
+                                    String tb = b.getText().trim();
+                                    if (!tb.matches("(?i)^\\d+(?:[.,]\\d+)?\\s*(km|m)$")) continue;
+                                    Rect rb = b.getBoundingBox();
+                                    int dy = rb.top - ra.top;
+                                    if (dy <= 0 || dy > ra.height() * 3) continue;
+                                    if (Math.abs(rb.centerX() - ra.centerX()) > Math.max(ra.width(), rb.width())) continue;
+                                    if (dy < bestDy) { bestDy = dy; best = b; }
+                                }
+                                if (best != null) out.add(new Parser.Item(ta + " " + best.getText().trim(), ra.height()));
+                            }
                             for (Text.TextBlock b : t.getTextBlocks()) {
                                 Rect bb = b.getBoundingBox();
                                 if (bb != null && excluded(bb, exclude)) continue;

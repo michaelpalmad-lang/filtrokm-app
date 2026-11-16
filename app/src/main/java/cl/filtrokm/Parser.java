@@ -35,7 +35,8 @@ public class Parser {
         public boolean viaOcr;
         public double feePct = -1;   // inDrive: "X% de pago por servicio" de esta oferta
         public boolean hasAccept;    // la pantalla tiene "Aceptar por …" (detalle de solicitud)     // se completó leyendo la imagen de la pantalla
-        public boolean partial() { return pairs == 0 && min <= 0; } // falta distancia/tiempo del viaje
+        public boolean tripMissing; // solo se encontró la recogida, no el viaje
+        public boolean partial() { return (pairs == 0 && min <= 0) || tripMissing; } // falta distancia/tiempo del viaje
 
         public double perKm() { return km > 0 ? price / km : 0; }
         public double perHour() { return min > 0 ? price / (min / 60.0) : 0; }
@@ -137,6 +138,14 @@ public class Parser {
             }
         }
         o.pairs = pairs.size();
+        // inDrive: si todos los pares encontrados son la recogida ("~X km"), falta el viaje
+        Matcher tl2 = Pattern.compile("~\\s*(\\d+(?:[.,]\\d+)?)\\s*km", Pattern.CASE_INSENSITIVE).matcher(all);
+        if (tl2.find() && !pairs.isEmpty()) {
+            double pk = num(tl2.group(1));
+            boolean other = false;
+            for (double[] pp : pairs) if (Math.abs(pp[1] - pk) >= 0.05) other = true;
+            if (!other) o.tripMissing = true;
+        }
         Matcher fm = Pattern.compile("(\\d+(?:[.,]\\d+)?)\\s*%\\s*de pago por servicio", Pattern.CASE_INSENSITIVE).matcher(all);
         if (fm.find()) o.feePct = num(fm.group(1));
         o.hasAccept = all.toLowerCase(Locale.ROOT).contains("aceptar por");

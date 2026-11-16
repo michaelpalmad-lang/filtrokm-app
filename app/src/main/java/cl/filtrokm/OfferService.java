@@ -317,9 +317,13 @@ public class OfferService extends AccessibilityService {
             final List<Parser.Item> base = items;
             final String fpkg = pkg;
             final Parser.Offer fallback = o;
-            OcrHelper.capture(this, overlayRects(), new OcrHelper.Callback() {
+            final View hidden = card;
+            if (hidden != null) hidden.setAlpha(0f);
+            h.postDelayed(new Runnable() { public void run() {
+            OcrHelper.capture(OfferService.this, overlayRects(), new OcrHelper.Callback() {
                 public void done(List<Parser.Item> ocr) {
                     ocrBusy = false;
+                    if (hidden != null) hidden.setAlpha(1f);
                     if (ocr == null) { handle(fallback); return; }
                     List<Parser.Item> all = new ArrayList<Parser.Item>(base);
                     all.addAll(ocr);
@@ -328,11 +332,11 @@ public class OfferService extends AccessibilityService {
                     o2.viaOcr = true;
                     if (o2.price == 0) o2 = fallback;
                     saveDiag(fpkg + " +imagen", all, o2);
-                    lastOcrKey = key;
-                    lastOcrOffer = o2;
+                    if (!o2.partial()) { lastOcrKey = key; lastOcrOffer = o2; }
                     handle(o2);
                 }
             });
+            } }, 180);
             return;
         }
         handle(o);
@@ -345,7 +349,7 @@ public class OfferService extends AccessibilityService {
 
     List<Rect> overlayRects() {
         List<Rect> r = new ArrayList<Rect>();
-        for (View v : new View[]{card, bubble, menu, target}) {
+        for (View v : new View[]{bubble, menu, target}) {
             if (v == null) continue;
             int[] loc = new int[2];
             v.getLocationOnScreen(loc);
