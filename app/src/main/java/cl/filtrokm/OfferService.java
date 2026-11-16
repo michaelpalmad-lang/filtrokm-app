@@ -48,6 +48,16 @@ public class OfferService extends AccessibilityService {
         paused = Prefs.sp(this).getBoolean("paused", false);
         if (!Prefs.sp(this).getBoolean("off", false)) showBubble();
         else paused = true;
+        // recién actualizada desde la app: avisar y volver a abrir FiltroKM
+        android.content.SharedPreferences sp = Prefs.sp(this);
+        String ver = Updater.currentName(this);
+        if (!ver.equals(sp.getString("lastVersion", ver))) {
+            android.widget.Toast.makeText(this, "FiltroKM actualizada a la versión " + ver, android.widget.Toast.LENGTH_LONG).show();
+            if (sp.getBoolean("reopenAfterUpdate", false)) {
+                h.postDelayed(new Runnable() { public void run() { openApp(); } }, 800);
+            }
+        }
+        sp.edit().putString("lastVersion", ver).putBoolean("reopenAfterUpdate", false).apply();
     }
 
     /** Encender (burbuja + lectura) o apagar todo. */

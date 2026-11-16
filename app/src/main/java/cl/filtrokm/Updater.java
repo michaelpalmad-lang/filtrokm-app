@@ -80,6 +80,7 @@ public class Updater {
                     File f = new File(a.getCacheDir(), "update.apk");
                     download(url, f);
                     post(ui, l, "Instalando " + tag + "…");
+                    Prefs.sp(a).edit().putBoolean("reopenAfterUpdate", true).commit();
                     install(a, f);
                 } catch (Exception e) {
                     post(ui, l, silentIfNone ? "" : "No se pudo revisar: " + e.getMessage());
