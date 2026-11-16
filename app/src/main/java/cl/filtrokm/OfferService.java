@@ -301,7 +301,10 @@ public class OfferService extends AccessibilityService {
 
         Parser.Offer o = Parser.parse(items);
         o.app = Parser.appName(pkg);
+        // inDrive: solo la pantalla de una solicitud ("Aceptar por …"), no la lista de solicitudes
+        if ("inDrive".equals(o.app) && !o.hasAccept) o.valid = false;
         saveDiag(pkg, items, o);
+        if ("inDrive".equals(o.app) && !o.hasAccept) { scheduleHide(); return; }
 
         // Falta la distancia del viaje en el texto (ej. inDrive la dibuja en el mapa): leer la imagen
         if (o.price > 0 && o.pairs == 0 && OcrHelper.supported()) {
@@ -405,19 +408,21 @@ public class OfferService extends AccessibilityService {
         }
     }
 
-    long lastDiag;
+    final java.util.HashMap<String, Long> lastDiagAt = new java.util.HashMap<String, Long>();
     void saveDiag(String pkg, List<Parser.Item> items, Parser.Offer o) {
+        String app = Parser.appName(pkg.replace(" +imagen", ""));
         long now = SystemClock.uptimeMillis();
-        if (!o.valid && now - lastDiag < 3000) return; // no escribir a cada rato
-        lastDiag = now;
+        Long prev = lastDiagAt.get(app);
+        if (!o.valid && prev != null && now - prev < 3000) return; // no escribir a cada rato
+        lastDiagAt.put(app, now);
         StringBuilder sb = new StringBuilder();
-        sb.append("# ").append(pkg).append(o.valid ? " (oferta detectada)" : " (sin oferta)").append('\n');
+        sb.append("# ").append(pkg).append(o.valid ? " (oferta detectada)" : " (sin oferta)")
+          .append(" ").append(android.text.format.DateFormat.format("HH:mm:ss", new java.util.Date())).append('\n');
         for (Parser.Item it : items) {
-            if (sb.length() > 6000) break;
+            if (sb.length() > 3500) break;
             sb.append(it.h).append('|').append(it.text.replace('\n', ' ')).append('\n');
         }
-        String key = o.valid ? "diagOk" : "diag";
-        Prefs.sp(this).edit().putString(key, sb.toString()).apply();
+        Prefs.sp(this).edit().putString((o.valid ? "diagOk_" : "diag_") + app, sb.toString()).apply();
     }
 
     void show(Parser.Offer o) {

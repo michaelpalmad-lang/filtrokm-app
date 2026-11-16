@@ -208,9 +208,17 @@ public class MainActivity extends Activity {
         if (System.currentTimeMillis() - lastCheck > 10 * 60 * 1000L) checkUpdate(true);
         SharedPreferences sp = Prefs.sp(this);
         seen.setText(sp.getString("seenPkgs", "Todavía nada. Abre Uber, DiDi o inDrive con el monitoreo encendido."));
-        String ok = sp.getString("diagOk", null);
-        String last = sp.getString("diag", null);
-        diag.setText(ok != null ? ok : (last != null ? last : "Aún no hay capturas. Abre Uber/DiDi/inDrive con el lector activo."));
+        StringBuilder d = new StringBuilder();
+        for (String app : new String[]{"DiDi", "Uber", "inDrive"}) {
+            d.append("===== ").append(app).append(" =====\n");
+            String ok = sp.getString("diagOk_" + app, null);
+            String last = sp.getString("diag_" + app, null);
+            if (ok != null) d.append(ok);
+            else if (last != null) d.append(last);
+            else d.append("(sin capturas todavía)\n");
+            d.append('\n');
+        }
+        diag.setText(d.toString());
     }
 
     void appSwitch(String label, final String key, final SharedPreferences sp) {

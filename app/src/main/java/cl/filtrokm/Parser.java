@@ -32,7 +32,9 @@ public class Parser {
         public double pickupMin = -1;
         public boolean valid;
         public int pairs;          // pares tiempo/distancia encontrados
-        public boolean viaOcr;     // se completó leyendo la imagen de la pantalla
+        public boolean viaOcr;
+        public double feePct = -1;   // inDrive: "X% de pago por servicio" de esta oferta
+        public boolean hasAccept;    // la pantalla tiene "Aceptar por …" (detalle de solicitud)     // se completó leyendo la imagen de la pantalla
         public boolean partial() { return pairs == 0 && min <= 0; } // falta distancia/tiempo del viaje
 
         public double perKm() { return km > 0 ? price / km : 0; }
@@ -135,6 +137,9 @@ public class Parser {
             }
         }
         o.pairs = pairs.size();
+        Matcher fm = Pattern.compile("(\\d+(?:[.,]\\d+)?)\\s*%\\s*de pago por servicio", Pattern.CASE_INSENSITIVE).matcher(all);
+        if (fm.find()) o.feePct = num(fm.group(1));
+        o.hasAccept = all.toLowerCase(Locale.ROOT).contains("aceptar por");
         String low = all.toLowerCase(Locale.ROOT);
         o.ponTuPrecio = low.contains("pon tu precio");
         if (low.contains("efectivo")) o.pago = "Efectivo";

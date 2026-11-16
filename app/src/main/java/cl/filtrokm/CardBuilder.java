@@ -21,7 +21,7 @@ public class CardBuilder {
     public static View build(Context c, Parser.Offer o, Prefs p, View.OnClickListener onClose) {
         if (o.partial()) return buildPartial(c, o, p, onClose);
         // ganancia final = precio - comisión - retención (solo Uber/DiDi) - combustible
-        double com = o.price * p.commission(o.app, o.ponTuPrecio) / 100.0;
+        double com = o.price * comPct(o, p) / 100.0;
         double ret = (o.price - com) * p.retention(o.app) / 100.0;
         double fuel = p.costPerKm * o.km;
         double net = o.price - com - ret - fuel;
@@ -82,7 +82,7 @@ public class CardBuilder {
 
     /** Falta la distancia/tiempo del viaje: no se da veredicto, tarjeta gris. */
     static View buildPartial(Context c, Parser.Offer o, Prefs p, View.OnClickListener onClose) {
-        double com = o.price * p.commission(o.app, o.ponTuPrecio) / 100.0;
+        double com = o.price * comPct(o, p) / 100.0;
         double ret = (o.price - com) * p.retention(o.app) / 100.0;
         double net = o.price - com - ret;
         LinearLayout root = new LinearLayout(c);
@@ -106,6 +106,12 @@ public class CardBuilder {
         l3.setAlpha(0.9f);
         root.addView(l3);
         return root;
+    }
+
+    /** % a descontar: inDrive usa el % de servicio de la oferta (+ IVA) si aparece. */
+    static double comPct(Parser.Offer o, Prefs p) {
+        if ("inDrive".equals(o.app) && o.feePct >= 0) return o.feePct * 1.19;
+        return p.commission(o.app, o.ponTuPrecio);
     }
 
     static LinearLayout box(Context c, String big, String small, boolean ok) {
