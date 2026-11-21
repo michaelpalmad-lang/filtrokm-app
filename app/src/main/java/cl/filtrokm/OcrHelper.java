@@ -86,7 +86,7 @@ public class OcrHelper {
                                     if (Math.abs(rb.centerX() - ra.centerX()) > Math.max(ra.width(), rb.width())) continue;
                                     if (dy < bestDy) { bestDy = dy; best = b; }
                                 }
-                                if (best != null) out.add(new Parser.Item(ta + " " + best.getText().trim(), ra.height()));
+                                if (best != null) out.add(new Parser.Item(ta + " " + best.getText().trim(), ra.height(), ra.top));
                             }
                             for (Text.TextBlock b : t.getTextBlocks()) {
                                 Rect bb = b.getBoundingBox();
@@ -99,7 +99,7 @@ public class OcrHelper {
                                     Rect lb = l.getBoundingBox();
                                     if (lb != null) h = Math.max(h, lb.height());
                                 }
-                                if (sb.length() > 0) out.add(new Parser.Item(sb.toString(), h));
+                                if (sb.length() > 0) out.add(new Parser.Item(sb.toString(), h, bb != null ? bb.top : -1));
                             }
                             cb.done(out);
                         }

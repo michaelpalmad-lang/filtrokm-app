@@ -73,7 +73,7 @@ public class CardBuilder {
         root.addView(l3);
 
         if (fuel > 0) {
-            TextView l4 = tv(c, "⛽ Bencina −" + Parser.clp(fuel) + "  (" + Parser.km(o.km) + " km)", 13, false);
+            TextView l4 = tv(c, "⛽ Bencina " + Parser.clp(fuel) + " (ya descontada)", 13, false);
             l4.setAlpha(0.85f);
             root.addView(l4);
         }

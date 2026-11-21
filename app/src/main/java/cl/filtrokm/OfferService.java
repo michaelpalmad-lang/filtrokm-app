@@ -334,12 +334,14 @@ public class OfferService extends AccessibilityService {
             final List<Parser.Item> base = items;
             final String fpkg = pkg;
             final Parser.Offer fallback = o;
-            final View hidden = card;
+            // En la lista de viajes no se esconde la tarjeta (evita parpadeo); se ignora lo que tapa
+            final boolean keepCard = lastListMode;
+            final View hidden = keepCard ? null : card;
             final View hiddenB = bubble;
             if (hidden != null) hidden.setAlpha(0f);
             if (hiddenB != null) hiddenB.setAlpha(0f);
             h.postDelayed(new Runnable() { public void run() {
-            OcrHelper.capture(OfferService.this, overlayRects(), new OcrHelper.Callback() {
+            OcrHelper.capture(OfferService.this, overlayRects(keepCard), new OcrHelper.Callback() {
                 public void done(List<Parser.Item> ocr) {
                     ocrBusy = false;
                     if (hidden != null) hidden.setAlpha(1f);
@@ -347,6 +349,8 @@ public class OfferService extends AccessibilityService {
                     if (ocr == null) { handle(fallback); return; }
                     List<Parser.Item> all = new ArrayList<Parser.Item>(base);
                     all.addAll(ocr);
+                    lastListMode = Parser.isListScreen(all);
+                    if (lastListMode) all = Parser.firstCard(all); // solo el primer viaje de la lista
                     Parser.Offer o2 = Parser.parse(all);
                     o2.app = Parser.appName(fpkg);
                     o2.viaOcr = true;
@@ -362,14 +366,15 @@ public class OfferService extends AccessibilityService {
         handle(o);
     }
 
+    boolean lastListMode;
     String lastOcrKey = "";
     Parser.Offer lastOcrOffer;
     boolean ocrBusy;
     long lastOcr;
 
-    List<Rect> overlayRects() {
+    List<Rect> overlayRects(boolean withCard) {
         List<Rect> r = new ArrayList<Rect>();
-        for (View v : new View[]{menu, target}) {
+        for (View v : new View[]{menu, target, withCard ? card : null}) {
             if (v == null) continue;
             int[] loc = new int[2];
             v.getLocationOnScreen(loc);

@@ -18,7 +18,9 @@ public class Parser {
     public static class Item {
         public String text;
         public int h; // alto en pantalla (sirve para elegir el precio, que es el texto más grande)
+        public int y = -1; // posición vertical en pantalla (solo lectura de imagen)
         public Item(String t, int h) { this.text = t; this.h = h; }
+        public Item(String t, int h, int y) { this.text = t; this.h = h; this.y = y; }
     }
 
     public static class Offer {
@@ -235,6 +237,51 @@ public class Parser {
             }
         }
         return best;
+    }
+
+    /** ¿La pantalla es una lista de viajes ("Centro de viajes" de DiDi)? */
+    public static boolean isListScreen(List<Item> items) {
+        for (Item it : items) {
+            String t = it.text.toLowerCase(Locale.ROOT);
+            if (t.contains("elige un viaje") || t.contains("centro de viajes")) return true;
+        }
+        return false;
+    }
+
+    /**
+     * En una lista de viajes, deja solo la primera tarjeta completa de arriba:
+     * desde su precio (con la etiqueta de encima) hasta su botón "Aceptar".
+     */
+    public static List<Item> firstCard(List<Item> items) {
+        List<Item> ys = new ArrayList<Item>();
+        for (Item it : items) if (it.y >= 0) ys.add(it);
+        int maxH = 0;
+        for (Item it : ys) if (isPrice(it.text)) maxH = Math.max(maxH, it.h);
+        if (maxH == 0) return items;
+        List<Item> prices = new ArrayList<Item>();
+        for (Item it : ys) if (isPrice(it.text) && it.h >= maxH * 0.75) prices.add(it);
+        java.util.Collections.sort(prices, new java.util.Comparator<Item>() {
+            public int compare(Item a, Item b) { return a.y - b.y; }
+        });
+        for (Item p : prices) {
+            int acc = Integer.MAX_VALUE;
+            for (Item it : ys) {
+                String t = it.text.trim().toLowerCase(Locale.ROOT);
+                if (t.startsWith("aceptar") && it.y > p.y && it.y < acc) acc = it.y;
+            }
+            if (acc == Integer.MAX_VALUE) continue;
+            int top = p.y - (int) (p.h * 1.6);
+            List<Item> out = new ArrayList<Item>();
+            for (Item it : ys) if (it.y >= top && it.y <= acc) out.add(it);
+            return out;
+        }
+        return items;
+    }
+
+    static boolean isPrice(String t) {
+        Matcher m = MONEY.matcher(t);
+        while (m.find()) if (m.group(1) == null && m.group(3) == null && money(m.group(2)) >= 300) return true;
+        return false;
     }
 
     static long money(String s) {
